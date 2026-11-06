@@ -227,6 +227,49 @@
   #pnames input{width:100%;min-width:0;background:transparent;border:0;color:#fff;font-size:13px;font-weight:700;outline:none;padding:4px 0}
   #intro ul{margin:8px 0 12px;padding-left:18px;font-size:12px;line-height:1.65;opacity:.85}
   #intro kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:0 5px;font-size:11px}
+  #more{display:contents}
+  #btnMore{display:none}
+  #ask{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,4,20,.6);z-index:15;padding:16px}
+  #ask.show{display:flex}
+  #ask .panel{width:min(380px,100%);border-radius:20px;padding:20px}
+  #ask b{font-family:var(--sfont);font-weight:900;font-size:21px}
+  #ask p{font-size:13.5px;opacity:.85;margin:8px 0 4px;line-height:1.5}
+  #gtime{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:4px}
+  #gtime button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;border-radius:10px;padding:8px 0;font-weight:800;font-size:12.5px}
+  #gtime button.on{background:linear-gradient(135deg,#ffb347,#ff3d8b);border-color:transparent;box-shadow:0 4px 12px rgba(255,140,60,.4)}
+  #gamePill.warn{background:rgba(220,20,60,.75);animation:warnP .5s ease-in-out infinite alternate}
+  #gamePill.warn b{color:#fff}
+  @keyframes warnP{to{transform:scale(1.1);box-shadow:0 0 18px rgba(255,40,80,.8)}}
+  #gamePill.off{display:none}
+  /* rename in the big player view */
+  #pview .nm{display:flex;align-items:center;gap:8px}
+  #pview .ed{flex:none;width:34px;height:34px;border-radius:10px;border:0;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center}
+  #pview .ed:hover{background:rgba(255,255,255,.3)}
+  #pview .nm input{font-family:var(--hfont);font-size:clamp(24px,4.5vw,34px);width:7em;max-width:52vw;border:2px solid #fff;border-radius:12px;
+    background:rgba(0,0,0,.35);color:#fff;padding:2px 10px;outline:none}
+  #results .win{border:2px solid #ffd23d !important;background:linear-gradient(120deg,rgba(255,210,61,.22),rgba(255,255,255,.04)) !important;box-shadow:0 0 22px rgba(255,210,61,.35)}
+  #results .crown{font-size:11px;font-weight:900;color:#2a1600;background:#ffd23d;border-radius:999px;padding:2px 8px;margin-left:6px}
+  /* ---------- phones: slim player strip so the machine stays visible ---------- */
+  @media (max-width: 640px), (max-height: 520px) {
+    #bar{gap:4px}
+    #btnMore{display:inline-block}
+    #more{display:none}
+    #bar.open #more{display:flex;flex-wrap:wrap;gap:4px;width:100%;justify-content:flex-end}
+    .pill{padding:5px 9px;font-size:11.5px}
+    .pill b{font-size:13px}
+    .tbtn{padding:5px 7px;font-size:11px;border-radius:8px}
+    #players{flex-direction:row;flex-wrap:wrap;width:auto;max-width:100%;max-height:none;gap:4px;padding:0}
+    .prow,.prow.cur{width:auto;padding:2px 9px 2px 2px;gap:5px;border-radius:999px;border-left-width:3px;box-shadow:none}
+    .prow .av,.prow.cur .av{width:22px;height:22px;font-size:11px}
+    .prow .who{max-width:4.6em}
+    .prow .nm{font-size:12px}
+    .prow.cur .nm{font-size:14px}
+    .prow .turn,.prow.cur .turn{display:none}
+    .prow .ct,.prow.cur .ct{font-size:14px;padding:0 4px;min-width:1em}
+    .prow .pchips{display:none}
+    .prow.cur{box-shadow:0 0 0 2px #fff,0 0 12px var(--pc)}
+    #msg{bottom:150px;font-size:13px;padding:7px 14px}
+  }
   #btnStart{width:100%;padding:13px;border:0;border-radius:14px;font-size:17px;color:#fff;font-family:var(--hfont);letter-spacing:.1em;
     background:linear-gradient(90deg,#ff3d8b,#a64dff);box-shadow:0 6px 18px rgba(255,61,139,.45)}
   #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;z-index:20;background:#0c0822;text-align:center;padding:20px}
@@ -237,16 +280,21 @@
 
 <div id="top">
   <div id="bar">
+    <div class="pill glass" id="gamePill">게임<b id="vGame">5:00</b></div>
     <div class="pill glass">시간<b id="vTime">--</b></div>
     <div class="pill glass">남은 자음<b id="vLeft">42</b></div>
     <div class="sp"></div>
+    <button class="tbtn glass" id="btnHome" title="처음 화면으로 (H)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>처음으로</button>
     <button class="tbtn glass" id="btnView">시점: 내부캠</button>
+    <button class="tbtn glass" id="btnMore" aria-expanded="false">메뉴 ▾</button>
+    <span id="more">
     <button class="tbtn glass" id="btnAim">조준선 ON</button>
     <button class="tbtn glass" id="btnDiff">난이도: 보통</button>
     <button class="tbtn glass" id="btnSound">소리 ON</button>
     <button class="tbtn glass" id="btnShuffle">글자 섞기</button>
     <button class="tbtn glass" id="btnShot" title="화면 캡처 (P)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>캡처</button>
     <button class="tbtn glass" id="btnResults">결과</button>
+    </span>
   </div>
   <div id="players"></div>
 </div>
@@ -276,6 +324,8 @@
   <div class="hd"></div><div class="grid"></div>
   <div class="nav"><button id="pvPrev">‹ 이전 사람</button><button class="pri" id="pvOk">닫기</button><button id="pvNext">다음 사람 ›</button></div>
 </div></div>
+<div id="ask"><div class="panel glass"><b>처음 화면으로 돌아갈까요?</b><p>지금까지 모은 자음 기록은 사라져요. 필요하면 먼저 [캡처]로 저장하세요.</p>
+  <div class="rbtns"><button id="askNo">계속하기</button><button class="pri" id="askYes">처음으로</button></div></div></div>
 <div id="results"><div class="panel glass"><h2>뽑은 자음 모아보기</h2><div id="resList"></div>
   <div class="rbtns"><button id="btnNew">새 게임</button><button class="pri" id="btnClose">계속하기</button></div></div></div>
 
@@ -294,11 +344,14 @@
     <div class="sec">몇 명이 할까요?</div>
     <div id="pcount"></div>
     <div id="pnames"></div>
+    <div class="sec">게임 시간</div>
+    <div id="gtime"></div>
     <ul>
       <li>이동: 조이스틱 / <kbd>방향키</kbd> <kbd>WASD</kbd> · 잡기: 버튼 / <kbd>Space</kbd></li>
       <li>시점 회전: 화면을 드래그 (내부캠에서도 가능), 휠로 확대</li>
       <li>[난이도] 쉬움 · 보통 · 어려움, [글자 섞기] (<kbd>R</kbd>) 다시 배치, [결과]에서 모은 자음 보기</li>
       <li>[캡처] (<kbd>P</kbd>) 화면을 찍어 복사하거나 파일로 저장</li>
+      <li>플레이어를 누르면 모은 자음을 크게 보고 이름도 고칠 수 있어요</li>
     </ul>
     <button id="btnStart">게임 시작</button>
   </div>
@@ -945,11 +998,22 @@ function showSplash() {
   sp.querySelector('.tt').textContent = players.length > 1 ? '차례!' : '시작!';
   sp.classList.remove('show'); void sp.offsetWidth; sp.classList.add('show');
 }
-function renderResults() {
+function renderResults(over = false) {
   const order = players.map((p, i) => ({ ...p, i })).sort((a, b) => b.letters.length - a.letters.length);
-  $('#resList').innerHTML = order.map((p, k) => `<div class="rcard" style="border-color:${p.color}55">
-    <div class="hd"><span class="rank">${k + 1}</span><i style="background:${p.color}"></i>${esc(p.name)}<span class="cnt">${p.letters.length}개</span></div>
-    <div class="pchips">${p.letters.length ? p.letters.map(l => `<span class="chip" style="background:${l.hex}">${l.c}</span>`).join('') : '<span style="opacity:.6;font-size:13px">아직 없어요</span>'}</div></div>`).join('');
+  const top = order.length ? order[0].letters.length : 0;
+  let rank = 0, prev = -1;
+  $('#resList').innerHTML = order.map((p, k) => { if (p.letters.length !== prev) { rank = k + 1; prev = p.letters.length; }
+    const win = over && top > 0 && p.letters.length === top;
+    return `<div class="rcard${win ? ' win' : ''}" style="border-color:${p.color}55">
+    <div class="hd"><span class="rank">${rank}</span><i style="background:${p.color}"></i>${esc(p.name)}${win ? '<span class="crown">우승</span>' : ''}<span class="cnt">${p.letters.length}개</span></div>
+    <div class="pchips">${p.letters.length ? p.letters.map(l => `<span class="chip" style="background:${l.hex}">${l.c}</span>`).join('') : '<span style="opacity:.6;font-size:13px">아직 없어요</span>'}</div></div>`; }).join('');
+}
+function showResults(over = false) {
+  renderResults(over);
+  $('#results h2').textContent = over ? '게임 끝! 최종 결과' : '뽑은 자음 모아보기';
+  $('#btnNew').textContent = '처음으로';
+  $('#btnClose').textContent = over ? '같은 사람으로 다시' : '계속하기';
+  $('#results').classList.add('show');
 }
 
 /* ================= Game state ================= */
@@ -1194,6 +1258,9 @@ function spawnAwayFromClaw(n, y0, dy) {
 function resetLetters() {
   if (introOpen) return;
   if (shuffling || !(state === 'idle' || state === 'move')) { showMsg('집게가 돌아온 뒤에 섞을 수 있어요', 1.5); return; }
+  doShuffle();
+}
+function doShuffle() {
   shuffling = true; initAudio(); sfx.whoosh();
   for (let i = prizes.length - 1; i >= 0; i--) { const p = prizes[i]; if (p.held) continue; scene.remove(p.mesh); prizes.splice(i, 1); }
   letterQueue = [];
@@ -1306,13 +1373,82 @@ function endOrbit() {
   $('#intro').classList.add('show');
 }
 let pcount = 1;
-function buildPlayerPicker() {
+/* ---- game clock ---- */
+const GAME_OPTS = [[0, '제한 없음'], [180, '3분'], [300, '5분'], [600, '10분']];
+let gameLen = 300, gameLeft = 300, timeUp = false, lastBeepS = -1;
+const fmtT = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function buildTimePicker() {
+  $('#gtime').innerHTML = '';
+  for (const [sec, label] of GAME_OPTS) {
+    const b = document.createElement('button'); b.textContent = label; if (sec === gameLen) b.classList.add('on');
+    b.onclick = () => { gameLen = sec; buildTimePicker(); }; $('#gtime').appendChild(b);
+  }
+}
+function updateGameHUD() {
+  const pill = $('#gamePill');
+  pill.classList.toggle('off', gameLen === 0);
+  pill.classList.toggle('warn', gameLen > 0 && !timeUp && gameLeft <= 10);
+  $('#vGame').textContent = timeUp ? '끝' : fmtT(Math.ceil(gameLeft));
+}
+const overlayOpen = () => ['#pview', '#results', '#shot', '#ask'].some(s => $(s).classList.contains('show'));
+function tickGameClock(dt) {
+  if (introPhase !== 'done' || gameLen === 0 || timeUp || state === 'over' || overlayOpen()) return;
+  gameLeft = Math.max(0, gameLeft - dt);
+  const s = Math.ceil(gameLeft);
+  if (s <= 10 && s > 0 && s !== lastBeepS) { lastBeepS = s; tone(s <= 3 ? 1320 : 990, 0.09, 'square', 0.06); }
+  if (gameLeft <= 0) {
+    timeUp = true; tone(523, 0.5, 'sawtooth', 0.07); tone(392, 0.7, 'sawtooth', 0.07, 0.25);
+    if (state === 'idle') endGame();
+    else { if (state === 'move') beginDrop(); showMsg('시간 끝! 이번이 마지막 판이에요', 3); }
+  }
+  updateGameHUD();
+}
+function endGame() {
+  setState('over'); timeUp = true; updateGameHUD(); updateHUD();
+  flashT = 3; burstConfetti(); sfx.win();
+  showMsg('게임 끝!', 3);
+  setTimeout(() => showResults(true), 700);
+}
+function resetClaw() {
+  if (held) { const h = held; releaseHeld(false); scene.remove(h.mesh); prizes.splice(prizes.indexOf(h), 1); }
+  carriage.x = HOME.x; carriage.z = HOME.z; carriage.vx = carriage.vz = carriage.pvx = carriage.pvz = 0;
+  cableLen = CABLE_REST; sway.x = sway.z = sway.wx = sway.wz = 0;
+  fingers.forEach(f => { f.target = REST; f.stopped = false; f.contact = null; });
+}
+function restartSame() {
+  $('#results').classList.remove('show');
+  resetClaw();
+  players.forEach(p => p.letters = []); cur = 0;
+  gameLeft = gameLen; timeUp = false; lastBeepS = -1;
+  doShuffle(); renderPlayers(); updateGameHUD();
+  setState('idle'); showMsg(`${players[0].name} 차례! 조이스틱을 움직이면 시작`); setTimeout(showSplash, 600);
+}
+function goHome() {
+  if (introPhase !== 'done') return;
+  const played = players.some(p => p.letters.length) && state !== 'over';
+  if (played) { $('#ask').classList.add('show'); return; }
+  doGoHome();
+}
+function doGoHome() {
+  $('#ask').classList.remove('show');
+  ['#pview', '#results', '#shot'].forEach(s => $(s).classList.remove('show'));
+  resetClaw(); setState('idle');
+  introPhase = 'card'; introOpen = true; tween = null; viewMode = 0; $('#btnView').textContent = '시점: 내부캠';
+  controls.enabled = false; camera.fov = 40; camera.updateProjectionMatrix();
+  const v = orbitPose(1); camera.position.copy(v.p); controls.target.copy(v.t); camera.lookAt(v.t);
+  document.body.classList.add('in-intro');
+  pcount = players.length; buildPlayerPicker(players.map(p => /^플레이어 \d$/.test(p.name) ? '' : p.name));
+  buildTimePicker();
+  doShuffle();
+  $('#intro').classList.add('show');
+}
+function buildPlayerPicker(prefill) {
   const pc = $('#pcount'); pc.innerHTML = '';
   for (let n = 1; n <= 6; n++) {
     const b = document.createElement('button'); b.textContent = n + '인'; if (n === pcount) b.classList.add('on');
     b.onclick = () => { pcount = n; buildPlayerPicker(); }; pc.appendChild(b);
   }
-  const old = [...$('#pnames').querySelectorAll('input')].map(i => i.value);
+  const old = prefill || [...$('#pnames').querySelectorAll('input')].map(i => i.value);
   $('#pnames').innerHTML = Array.from({ length: pcount }, (_, i) =>
     `<label><i style="background:${PCOLORS[i]}"></i><input maxlength="10" placeholder="플레이어 ${i + 1}" value="${esc(old[i] || '')}"></label>`).join('');
 }
@@ -1320,6 +1456,7 @@ function startFromCard() {
   if (introPhase !== 'card') return;
   const names = [...$('#pnames').querySelectorAll('input')].map((inp, i) => inp.value.trim() || `플레이어 ${i + 1}`);
   players = names.map((name, i) => ({ name, color: PCOLORS[i], letters: [] })); cur = 0;
+  gameLeft = gameLen; timeUp = false; lastBeepS = -1; updateGameHUD();
   renderPlayers();
   initAudio(); sfx.whoosh();
   introPhase = 'done'; introOpen = false;
@@ -1347,6 +1484,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyV' && !e.repeat && !introOpen) goView((viewMode + 1) % 3);
   if (e.code === 'KeyR' && !e.repeat) resetLetters();
   if (e.code === 'KeyP' && !e.repeat) takeShot();
+  if (e.code === 'KeyH' && !e.repeat) goHome();
   if (e.code === 'Escape') { $('#shot').classList.remove('show'); $('#results').classList.remove('show'); closePlayerView(); }
   if (e.code.startsWith('Arrow')) e.preventDefault();
 });
@@ -1460,8 +1598,12 @@ $('#btnCopy').addEventListener('click', copyShot);
 $('#btnSave').addEventListener('click', saveShot);
 $('#btnShare').addEventListener('click', shareShot);
 $('#btnShotClose').addEventListener('click', () => $('#shot').classList.remove('show'));
-$('#btnResults').addEventListener('click', () => { renderResults(); $('#results').classList.add('show'); });
-$('#btnClose').addEventListener('click', () => $('#results').classList.remove('show'));
+$('#btnResults').addEventListener('click', () => showResults(state === 'over'));
+$('#btnClose').addEventListener('click', () => { if (state === 'over') restartSame(); else $('#results').classList.remove('show'); });
+$('#btnHome').addEventListener('click', goHome);
+$('#askYes').addEventListener('click', doGoHome);
+$('#askNo').addEventListener('click', () => $('#ask').classList.remove('show'));
+$('#btnMore').addEventListener('click', () => { const open = $('#bar').classList.toggle('open'); $('#btnMore').textContent = open ? '메뉴 ▴' : '메뉴 ▾'; $('#btnMore').setAttribute('aria-expanded', open); });
 
 /* ================= Player letter view: click a player -> their letters, big ================= */
 let pvIdx = 0;
@@ -1472,7 +1614,7 @@ function openPlayerView(i) {
   pv.style.setProperty('--pc', pl.color);
   const kinds = new Set(pl.letters.map(l => l.c)).size;
   pv.querySelector('.hd').innerHTML = `<div class="av" style="--pc:${pl.color}">${avatarOf(pl, pvIdx)}</div>
-    <div><div class="nm">${esc(pl.name)}</div><div class="sub">${pl.letters.length ? `모은 자음 ${kinds}종류 · 뽑은 순서대로` : '아직 뽑은 자음이 없어요'}</div></div>
+    <div><div class="nm"><span class="nmt">${esc(pl.name)}</span><button class="ed" title="이름 고치기" aria-label="이름 고치기"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button></div><div class="sub">${pl.letters.length ? `모은 자음 ${kinds}종류 · 뽑은 순서대로` : '아직 뽑은 자음이 없어요'}</div></div>
     <div class="ct">${pl.letters.length}<small>개</small></div>`;
   pv.querySelector('.grid').innerHTML = pl.letters.length
     ? pl.letters.map((l, k) => `<div class="big" style="--k:${k};background:${l.hex}"><i>${k + 1}</i><b>${l.c}</b><span>${nameOf(l.c)}</span></div>`).join('')
@@ -1481,13 +1623,28 @@ function openPlayerView(i) {
   pv.classList.add('show');
 }
 const closePlayerView = () => $('#pview').classList.remove('show');
+// rename: pencil button -> inline input (Enter / leaving the box saves, Esc cancels)
+function startRename() {
+  const i = pvIdx, nm = $('#pview .nm'), pl = players[i];
+  nm.innerHTML = `<input maxlength="10" value="${esc(pl.name)}" aria-label="플레이어 이름">`;
+  const inp = nm.querySelector('input'); inp.focus(); inp.select();
+  let done = false;
+  const finish = save => {
+    if (done) return; done = true;
+    if (save) { pl.name = inp.value.trim() || `플레이어 ${i + 1}`; renderPlayers(); showMsg(`이름을 '${pl.name}'(으)로 바꿨어요`, 1.6); }
+    openPlayerView(i);
+  };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); } });
+  inp.addEventListener('blur', () => finish(true));
+}
+$('#pview').addEventListener('click', e => { if (e.target.closest('.ed')) startRename(); });
 $('#players').addEventListener('click', e => { const row = e.target.closest('.prow'); if (row) openPlayerView(+row.dataset.i); });
 $('#pvClose').addEventListener('click', closePlayerView);
 $('#pvOk').addEventListener('click', closePlayerView);
 $('#pvPrev').addEventListener('click', () => openPlayerView(pvIdx - 1));
 $('#pvNext').addEventListener('click', () => openPlayerView(pvIdx + 1));
 $('#pview').addEventListener('click', e => { if (e.target.id === 'pview') closePlayerView(); });
-$('#btnNew').addEventListener('click', () => location.reload());
+$('#btnNew').addEventListener('click', goHome);
 $('#btnSkip').addEventListener('click', endOrbit);
 $('#btnStart').addEventListener('click', startFromCard);
 // canvas drag: orbit the inside cam (other views use OrbitControls); tap the 3D button to grab
@@ -1564,6 +1721,7 @@ function nextTurn() {
 }
 function update(dt) {
   st += dt;
+  tickGameClock(dt);
   const moving = readInput();
   let tvx = 0, tvz = 0;
   switch (state) {
@@ -1595,7 +1753,7 @@ function update(dt) {
       if (st > 1.6) { fingers.forEach(f => f.target = REST); setState('reset'); }
       break;
     case 'reset':
-      if (st > 0.7 && msgTimer <= 0) { setState('idle'); nextTurn(); updateHUD(); }
+      if (st > 0.7 && (msgTimer <= 0 || timeUp)) { if (timeUp) endGame(); else { setState('idle'); nextTurn(); updateHUD(); } }
       break;
   }
   // hard mode: like a real arcade claw, the grip weakens at the top -> it only keeps a letter that is still physically held
@@ -1686,6 +1844,7 @@ addEventListener('resize', onResize);
 
 $('#introTitle .jamo').innerHTML = [...JAMO].map((j, i) => `<span style="animation-delay:${i * 0.12}s">${j}</span>`).join('');
 buildPlayerPicker();
+buildTimePicker(); updateGameHUD();
 renderPlayers();
 // 42 letters = every consonant 3 times, dropped in 3 layers so they settle into a deep pile
 updateRig(1 / 60); updateClawVel(1 / 60);
@@ -1714,7 +1873,7 @@ $('#loading').style.display = 'none';
 loop();
 window.__claw = {
   aimAt(i) { const p = prizes[i]; if (state === 'idle') startGame(); carriage.x = clamp(p.pos.x, -CB, CB); carriage.z = clamp(p.pos.z, -CB, CB); carriage.vx = carriage.vz = 0; },
-  drop() { pressDrop(); }, setDiff(k) { diffKey = k; }, get lastChance() { return lastChance; },
+  drop() { pressDrop(); }, setGameLeft(s) { gameLeft = s; }, setDiff(k) { diffKey = k; }, get lastChance() { return lastChance; },
   get state() { return state; }, get intro() { return introPhase; }, prizes, carriage, fingers, get wins() { return wins; },
   maxPen() { return maxClawPen(); },
   gripDbg() { head.getWorldPosition(hp); return prizes.map(p => ({ c: p.c, dh: Math.hypot(p.pos.x - hp.x, p.pos.z - hp.z), dy: p.pos.y - hp.y, C: fingerContacts(p, D().tol).map(c => [+c.gap.toFixed(3), +c.n.x.toFixed(2), +c.n.y.toFixed(2), +c.n.z.toFixed(2)]), g: gripType(p).type }))
