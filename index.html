@@ -33,6 +33,35 @@
   .av{width:44px;height:44px;border-radius:50%;flex:none;background:#fff;color:var(--pc);display:flex;align-items:center;justify-content:center;
     font-family:var(--hfont);font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,.35),0 0 0 3px color-mix(in srgb,var(--pc) 40%,#fff)}
   /* one row per player, top to bottom; the current player's row is big and lit in their colour */
+  .prow{cursor:pointer}
+  .prow:hover{filter:brightness(1.15);transform:translateX(3px)}
+  .prow:active{transform:scale(.98)}
+  /* big letter view for one player */
+  #pview{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,4,20,.7);z-index:14;padding:16px}
+  #pview.show{display:flex}
+  #pview .panel{width:min(860px,100%);max-height:92vh;overflow:auto;border-radius:26px;padding:20px 22px 18px;position:relative;
+    background:linear-gradient(160deg,color-mix(in srgb,var(--pc) 38%,#1a0f33) 0%,rgba(22,12,44,.95) 55%);border:2px solid var(--pc);
+    box-shadow:0 0 0 1px rgba(255,255,255,.2),0 20px 60px color-mix(in srgb,var(--pc) 45%,transparent);animation:pvIn .45s cubic-bezier(.2,1.5,.4,1)}
+  @keyframes pvIn{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
+  #pview .hd{display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-right:46px}
+  #pview .hd .av{width:64px;height:64px;font-size:32px}
+  #pview .hd .nm{font-family:var(--hfont);font-size:clamp(28px,5vw,40px);line-height:1.05}
+  #pview .hd .sub{font-size:13px;opacity:.8;margin-top:3px}
+  #pview .hd .ct{margin-left:auto;font-family:var(--hfont);font-size:clamp(34px,6vw,52px);color:#fff;background:rgba(0,0,0,.28);border-radius:18px;padding:2px 18px;white-space:nowrap}
+  #pview .hd .ct small{font-size:.45em;margin-left:3px}
+  #pview .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px}
+  #pview .big{border-radius:22px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;
+    border:3px solid rgba(255,255,255,.85);box-shadow:0 8px 20px rgba(0,0,0,.35),inset 0 -8px 16px rgba(0,0,0,.18),inset 0 4px 8px rgba(255,255,255,.35);
+    animation:bigIn .5s cubic-bezier(.2,1.7,.4,1) both;animation-delay:calc(var(--k) * 45ms)}
+  @keyframes bigIn{from{transform:scale(.3) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
+  #pview .big b{font-family:var(--hfont);font-weight:400;font-size:clamp(46px,7.2vw,64px);line-height:1.25;margin-top:10px;color:#fff;text-shadow:0 4px 8px rgba(0,0,0,.3)}
+  #pview .big span{font-size:14px;font-weight:800;margin-top:4px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+  #pview .big i{position:absolute;top:6px;right:9px;font-style:normal;font-size:12px;font-weight:900;color:#fff;background:rgba(0,0,0,.3);border-radius:999px;padding:1px 7px}
+  #pview .empty{padding:40px 0;text-align:center;font-size:17px;opacity:.75}
+  #pview .nav{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:16px}
+  #pview .nav button{border:0;border-radius:12px;padding:10px 16px;font-weight:800;color:#fff;background:rgba(255,255,255,.12)}
+  #pview .nav .pri{background:linear-gradient(90deg,#ff3d8b,#a64dff)}
+  #pview .x{position:absolute;top:12px;right:14px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:20px;line-height:1}
   .prow{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:5px 10px 5px 5px;border-radius:16px;
     background:rgba(22,12,44,.74);border:1.5px solid color-mix(in srgb,var(--pc) 50%,transparent);border-left:6px solid var(--pc);
     backdrop-filter:blur(8px);transition:all .35s cubic-bezier(.2,1.3,.4,1)}
@@ -241,6 +270,11 @@
   <img id="shotImg" alt="캡처 미리보기">
   <div class="rbtns"><button id="btnShotClose">닫기</button><button id="btnShare" style="display:none">공유</button><button id="btnCopy">복사</button><button class="pri" id="btnSave">파일로 저장</button></div>
   <div id="shotMsg"></div>
+</div></div>
+<div id="pview"><div class="panel">
+  <button class="x" id="pvClose" aria-label="닫기">×</button>
+  <div class="hd"></div><div class="grid"></div>
+  <div class="nav"><button id="pvPrev">‹ 이전 사람</button><button class="pri" id="pvOk">닫기</button><button id="pvNext">다음 사람 ›</button></div>
 </div></div>
 <div id="results"><div class="panel glass"><h2>뽑은 자음 모아보기</h2><div id="resList"></div>
   <div class="rbtns"><button id="btnNew">새 게임</button><button class="pri" id="btnClose">계속하기</button></div></div></div>
@@ -897,7 +931,7 @@ let players = [{ name: '플레이어 1', color: PCOLORS[0], letters: [] }], cur 
 const avatarOf = (pl, i) => /^플레이어 \d$/.test(pl.name) ? String(i + 1) : esc([...pl.name][0]);
 function renderPlayers(newIdx = -1) {
   const pl = players[cur];
-  $('#players').innerHTML = players.map((p, i) => `<div class="prow${i === cur ? ' cur' : ''}" style="--pc:${p.color}">
+  $('#players').innerHTML = players.map((p, i) => `<div class="prow${i === cur ? ' cur' : ''}" data-i="${i}" title="클릭하면 모은 글자를 크게 볼 수 있어요" style="--pc:${p.color}">
     <div class="av">${avatarOf(p, i)}</div><div class="who"><span class="turn">${players.length > 1 ? '지금 차례' : '플레이어'}</span><span class="nm">${esc(p.name)}</span></div>
     <div class="ct">${p.letters.length}</div><div class="pchips">${
       p.letters.map((l, k) => `<span class="chip${i === newIdx && k === p.letters.length - 1 ? ' new' : ''}" style="background:${l.hex}">${l.c}</span>`).join('')}</div></div>`).join('');
@@ -1302,12 +1336,18 @@ addEventListener('keydown', e => {
   if (e.target && e.target.tagName === 'INPUT') { if (e.code === 'Enter') startFromCard(); return; }
   if (introPhase === 'orbit' && (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape')) { endOrbit(); e.preventDefault(); return; }
   if (introPhase === 'card' && (e.code === 'Enter' || e.code === 'Space')) { startFromCard(); e.preventDefault(); return; }
+  // while a player's letter view is open, keys browse players instead of moving the claw
+  if ($('#pview').classList.contains('show')) {
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') openPlayerView(pvIdx + (e.code === 'ArrowLeft' ? -1 : 1));
+    if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space') closePlayerView();
+    e.preventDefault(); return;
+  }
   keys[e.code] = true;
   if (e.code === 'Space' || e.code === 'Enter') { if (!e.repeat) pressDrop(); e.preventDefault(); }
   if (e.code === 'KeyV' && !e.repeat && !introOpen) goView((viewMode + 1) % 3);
   if (e.code === 'KeyR' && !e.repeat) resetLetters();
   if (e.code === 'KeyP' && !e.repeat) takeShot();
-  if (e.code === 'Escape') { $('#shot').classList.remove('show'); $('#results').classList.remove('show'); }
+  if (e.code === 'Escape') { $('#shot').classList.remove('show'); $('#results').classList.remove('show'); closePlayerView(); }
   if (e.code.startsWith('Arrow')) e.preventDefault();
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1422,6 +1462,31 @@ $('#btnShare').addEventListener('click', shareShot);
 $('#btnShotClose').addEventListener('click', () => $('#shot').classList.remove('show'));
 $('#btnResults').addEventListener('click', () => { renderResults(); $('#results').classList.add('show'); });
 $('#btnClose').addEventListener('click', () => $('#results').classList.remove('show'));
+
+/* ================= Player letter view: click a player -> their letters, big ================= */
+let pvIdx = 0;
+const nameOf = c => (LETTERS.find(L => L.c === c) || {}).n || '';
+function openPlayerView(i) {
+  pvIdx = (i + players.length) % players.length;
+  const pl = players[pvIdx], pv = $('#pview');
+  pv.style.setProperty('--pc', pl.color);
+  const kinds = new Set(pl.letters.map(l => l.c)).size;
+  pv.querySelector('.hd').innerHTML = `<div class="av" style="--pc:${pl.color}">${avatarOf(pl, pvIdx)}</div>
+    <div><div class="nm">${esc(pl.name)}</div><div class="sub">${pl.letters.length ? `모은 자음 ${kinds}종류 · 뽑은 순서대로` : '아직 뽑은 자음이 없어요'}</div></div>
+    <div class="ct">${pl.letters.length}<small>개</small></div>`;
+  pv.querySelector('.grid').innerHTML = pl.letters.length
+    ? pl.letters.map((l, k) => `<div class="big" style="--k:${k};background:${l.hex}"><i>${k + 1}</i><b>${l.c}</b><span>${nameOf(l.c)}</span></div>`).join('')
+    : `<div class="empty" style="grid-column:1/-1">집게로 자음을 뽑으면 여기에 크게 모여요!</div>`;
+  $('#pvPrev').style.visibility = $('#pvNext').style.visibility = players.length > 1 ? 'visible' : 'hidden';
+  pv.classList.add('show');
+}
+const closePlayerView = () => $('#pview').classList.remove('show');
+$('#players').addEventListener('click', e => { const row = e.target.closest('.prow'); if (row) openPlayerView(+row.dataset.i); });
+$('#pvClose').addEventListener('click', closePlayerView);
+$('#pvOk').addEventListener('click', closePlayerView);
+$('#pvPrev').addEventListener('click', () => openPlayerView(pvIdx - 1));
+$('#pvNext').addEventListener('click', () => openPlayerView(pvIdx + 1));
+$('#pview').addEventListener('click', e => { if (e.target.id === 'pview') closePlayerView(); });
 $('#btnNew').addEventListener('click', () => location.reload());
 $('#btnSkip').addEventListener('click', endOrbit);
 $('#btnStart').addEventListener('click', startFromCard);
