@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>3D 자음 뽑기 - Hangeul Claw Machine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Hahmlet:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--hfont:'Black Han Sans','Malgun Gothic',sans-serif;--sfont:'Hahmlet','Nanum Myeongjo',serif}
+  html,body{margin:0;height:100%;overflow:hidden;background:#0c0822;color:#fff;
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    user-select:none;-webkit-user-select:none;touch-action:none}
+  input{user-select:text;-webkit-user-select:text}
+  canvas{display:block}
+  button{font-family:inherit;cursor:pointer}
+  .glass{background:rgba(22,12,44,.64);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.15);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+  body.in-intro #top, body.in-intro #joy, body.in-intro #right, body.in-intro #msg, body.in-intro #carry{opacity:0;pointer-events:none}
+  #top,#joy,#right{transition:opacity .6s}
+
+  /* ---------- top bar ---------- */
+  #top{position:fixed;top:10px;left:10px;right:10px;display:flex;flex-direction:column;gap:8px;pointer-events:none;z-index:3}
+  #bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  #bar .sp{flex:1}
+  .pill{border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;white-space:nowrap}
+  .pill b{font-size:15px;margin-left:5px;color:#ffd23d}
+  #vTurn{font-family:var(--hfont);font-weight:400;font-size:15px}
+  .tbtn{color:#fff;border-radius:10px;padding:7px 10px;font-size:12px;font-weight:600;pointer-events:auto}
+  .tbtn:active{transform:scale(.96)}
+  #players{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:min(56%,400px);max-height:60vh;overflow:auto;pointer-events:auto;padding:2px 8px 4px 2px}
+  .av{width:44px;height:44px;border-radius:50%;flex:none;background:#fff;color:var(--pc);display:flex;align-items:center;justify-content:center;
+    font-family:var(--hfont);font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,.35),0 0 0 3px color-mix(in srgb,var(--pc) 40%,#fff)}
+  /* one row per player, top to bottom; the current player's row is big and lit in their colour */
+  .prow{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:5px 10px 5px 5px;border-radius:16px;
+    background:rgba(22,12,44,.74);border:1.5px solid color-mix(in srgb,var(--pc) 50%,transparent);border-left:6px solid var(--pc);
+    backdrop-filter:blur(8px);transition:all .35s cubic-bezier(.2,1.3,.4,1)}
+  .prow .av{width:30px;height:30px;font-size:15px;box-shadow:none}
+  .prow .who{display:flex;flex-direction:column;min-width:0;flex:none;max-width:7.5em}
+  .prow .nm{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prow .turn{display:none;font-size:10px;font-weight:900;letter-spacing:.1em;color:#fff;opacity:.9}
+  .prow .ct{font-family:var(--hfont);font-size:19px;color:var(--pc);min-width:1.3em;text-align:center;flex:none}
+  .prow .pchips{flex:1;min-width:0}
+  .prow .chip{min-width:24px;height:24px;font-size:16px;border-radius:7px;border-width:1px}
+  .prow.cur{background:linear-gradient(110deg,var(--pc) 0%,color-mix(in srgb,var(--pc) 42%,#1a0f33) 100%);border-color:rgba(255,255,255,.75);
+    border-left-color:#fff;box-shadow:0 8px 24px color-mix(in srgb,var(--pc) 60%,transparent);padding:9px 12px 9px 8px}
+  .prow.cur .av{width:46px;height:46px;font-size:23px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+  .prow.cur .nm{font-family:var(--hfont);font-weight:400;font-size:23px;text-shadow:0 2px 4px rgba(0,0,0,.35)}
+  .prow.cur .turn{display:block}
+  .prow.cur .ct{color:#fff;font-size:26px;background:rgba(0,0,0,.25);border-radius:10px;padding:0 8px}
+  .prow.cur .chip{min-width:30px;height:30px;font-size:20px;border-width:1.5px}
+  #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:6;opacity:0}
+  #splash.show{animation:splash 1.7s ease both}
+  #splash .av{width:96px;height:96px;font-size:48px;box-shadow:0 0 0 6px color-mix(in srgb,var(--pc) 55%,#fff),0 0 50px var(--pc)}
+  #splash .nm{margin-top:12px;font-family:var(--hfont);font-size:clamp(40px,10vw,72px);color:#fff;
+    text-shadow:0 0 0 #000,0 4px 0 color-mix(in srgb,var(--pc) 55%,#000),0 0 30px var(--pc)}
+  #splash .tt{font-family:var(--sfont);font-weight:800;font-size:clamp(20px,5vw,30px);color:var(--pc);background:rgba(10,5,25,.7);padding:4px 18px;border-radius:999px;margin-top:6px}
+  @keyframes splash{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.06)}25%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:scale(1.08)}}
+  .pchips{display:flex;flex-wrap:wrap;gap:4px}
+  .chip{min-width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;
+    font-family:var(--hfont);font-size:20px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);
+    border:1.5px solid rgba(255,255,255,.75);box-shadow:0 3px 8px rgba(0,0,0,.3)}
+  .chip.new{animation:pop .6s cubic-bezier(.2,1.8,.4,1)}
+  @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+
+  #msg{position:fixed;bottom:162px;left:50%;transform:translateX(-50%);padding:9px 18px;border-radius:999px;
+    font-weight:700;font-size:15px;white-space:nowrap;transition:opacity .3s;pointer-events:none;z-index:2}
+  #carry{position:fixed;right:14px;top:50%;transform:translateY(-50%) scale(.6);opacity:0;transition:all .35s cubic-bezier(.2,1.5,.4,1);
+    text-align:center;padding:12px 14px 10px;border-radius:20px;pointer-events:none;z-index:2}
+  #carry.show{opacity:1;transform:translateY(-50%) scale(1)}
+  #carry .big{width:84px;height:84px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;
+    font-family:var(--hfont);font-size:62px;color:#fff;border:3px solid #fff;text-shadow:0 3px 6px rgba(0,0,0,.35);box-shadow:0 0 26px rgba(255,255,255,.3)}
+  #carry .nm{font-size:12px;font-weight:700;opacity:.85}
+
+  /* ---------- joystick ---------- */
+  #joy{position:fixed;left:18px;bottom:22px;width:132px;height:132px;border-radius:50%;touch-action:none;border:3px solid transparent;
+    background:radial-gradient(circle at 50% 38%,#2b2346 0%,#120d22 74%) padding-box,
+               conic-gradient(from 0deg,#ff4fd8,#7a5cff,#22e6ff,#7dffb0,#ffd23d,#ff4fd8) border-box;
+    box-shadow:0 16px 32px rgba(0,0,0,.55),0 0 22px rgba(122,92,255,.35),inset 0 10px 24px rgba(0,0,0,.6);transition:box-shadow .2s}
+  #joy.active{box-shadow:0 16px 32px rgba(0,0,0,.55),0 0 34px rgba(34,230,255,.6),inset 0 10px 24px rgba(0,0,0,.6)}
+  #joy .track{position:absolute;inset:18px;border-radius:50%;border:1px solid rgba(255,255,255,.09);
+    background:repeating-radial-gradient(circle,rgba(255,255,255,.04) 0 1.5px,transparent 1.5px 7px)}
+  #joy .ar{position:absolute;width:0;height:0;opacity:.32;transition:opacity .12s,filter .12s}
+  #joy .ar.on{opacity:1;filter:drop-shadow(0 0 6px #22e6ff)}
+  #joy .n{top:9px;left:50%;margin-left:-6px;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:8px solid #fff}
+  #joy .s{bottom:9px;left:50%;margin-left:-6px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #fff}
+  #joy .w{left:9px;top:50%;margin-top:-6px;border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:8px solid #fff}
+  #joy .e{right:9px;top:50%;margin-top:-6px;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:8px solid #fff}
+  #knob{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;
+    background:radial-gradient(circle at 34% 28%,#fff 0%,#f2eefc 24%,#c8c0e4 60%,#8c84b2 100%);
+    box-shadow:0 12px 18px rgba(0,0,0,.6),inset 0 -6px 10px rgba(60,40,120,.35),inset 0 3px 4px rgba(255,255,255,.9)}
+  #knob::after{content:'';position:absolute;inset:17px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#ff9be6,#ff4fd8 45%,#7a5cff 100%);
+    box-shadow:inset 0 2px 3px rgba(255,255,255,.55),0 0 10px rgba(255,79,216,.65)}
+
+  /* ---------- grab button ---------- */
+  #right{position:fixed;right:20px;bottom:22px}
+  #btnDrop{position:relative;width:124px;height:124px;border-radius:50%;border:0;padding:0;background:transparent;-webkit-tap-highlight-color:transparent}
+  #btnDrop .halo{position:absolute;inset:-3px;border-radius:50%;background:conic-gradient(#ff4fd8,#7a5cff,#22e6ff,#7dffb0,#ffd23d,#ff4fd8);
+    animation:spin 3.5s linear infinite;opacity:.95;transition:opacity .3s}
+  #btnDrop .base{position:absolute;inset:3px;border-radius:50%;background:radial-gradient(circle at 50% 30%,#2b2346,#0e0a1a 78%);
+    box-shadow:0 16px 32px rgba(0,0,0,.6),inset 0 2px 2px rgba(255,255,255,.12)}
+  #btnDrop .cap{position:absolute;inset:15px 15px 19px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(130% 120% at 50% 0%,#ffa3c2 0%,#ff3d7f 36%,#d0004f 72%,#760030 100%);
+    box-shadow:0 6px 0 #5a0024,0 10px 22px rgba(255,40,110,.45),inset 0 -9px 14px rgba(80,0,30,.55),inset 0 2px 2px rgba(255,255,255,.6);
+    transition:transform .08s ease,box-shadow .08s ease,filter .3s}
+  #btnDrop .cap::before{content:'';position:absolute;top:6%;left:18%;width:64%;height:36%;border-radius:50%;
+    background:linear-gradient(to bottom,rgba(255,255,255,.72),rgba(255,255,255,0))}
+  #btnDrop .en{position:relative;font-size:10px;font-weight:800;letter-spacing:4px;opacity:.85;margin-left:4px}
+  #btnDrop .ko{position:relative;font-family:var(--hfont);font-size:26px;line-height:1.05;letter-spacing:2px;text-shadow:0 2px 3px rgba(80,0,30,.55)}
+  #btnDrop.press .cap{transform:translateY(5px);box-shadow:0 1px 0 #5a0024,0 3px 8px rgba(255,40,110,.4),inset 0 -5px 10px rgba(80,0,30,.6),inset 0 2px 2px rgba(255,255,255,.4)}
+  #btnDrop.busy .halo{opacity:.25;animation-play-state:paused}
+  #btnDrop.busy .cap{filter:saturate(.55) brightness(.85)}
+  #btnDrop .burst{position:absolute;inset:0;border-radius:50%;pointer-events:none}
+  #btnDrop.press .burst{animation:burst .45s ease-out}
+  @keyframes burst{from{box-shadow:0 0 0 0 rgba(255,79,216,.8)}to{box-shadow:0 0 0 22px rgba(255,79,216,0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- popups ---------- */
+  #popup{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .35s;z-index:4}
+  #popup.show{opacity:1}
+  #popup .card{padding:24px 36px 20px;border-radius:24px;text-align:center;transform:scale(.7);transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
+  #popup.show .card{transform:scale(1)}
+  #popup .sw{width:132px;height:132px;border-radius:30px;margin:0 auto 12px;border:4px solid #fff;display:flex;align-items:center;justify-content:center;
+    font-family:var(--hfont);font-size:96px;color:#fff;text-shadow:0 4px 8px rgba(0,0,0,.35);box-shadow:0 0 40px rgba(255,255,255,.35)}
+  #popup .t{font-family:var(--sfont);font-weight:900;font-size:30px;color:#ffd23d;letter-spacing:2px;text-shadow:0 0 18px rgba(255,210,61,.7)}
+  #popup .n{font-size:18px;font-weight:700;margin-top:6px}
+  #popup .s{font-size:12px;opacity:.75;margin-top:4px}
+
+  #results{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,4,20,.6);z-index:12;padding:16px}
+  #results.show{display:flex}
+  #results .panel{width:min(560px,100%);max-height:90vh;overflow:auto;border-radius:22px;padding:20px}
+  #results h2{margin:0 0 12px;font-family:var(--sfont);font-weight:900;font-size:26px}
+  .rcard{border-radius:16px;padding:10px 12px;margin-bottom:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)}
+  .rcard .hd{display:flex;align-items:center;gap:8px;font-weight:800;margin-bottom:8px}
+  .rcard .hd i{width:12px;height:12px;border-radius:50%}
+  .rcard .hd .rank{font-family:var(--hfont);font-size:18px;color:#ffd23d}
+  .rcard .hd .cnt{margin-left:auto;font-size:13px;opacity:.8}
+  .rcard .chip{min-width:44px;height:44px;font-size:30px;border-radius:12px}
+  .rbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .rbtns button{border:0;border-radius:12px;padding:10px 16px;font-weight:800;color:#fff;background:rgba(255,255,255,.12)}
+  .rbtns .pri{background:linear-gradient(90deg,#ff3d8b,#a64dff)}
+
+  /* ---------- intro ---------- */
+  /* title: Hahmlet (OFL), jamo assemble into syllables to show how Hangeul is built */
+  #introTitle{position:fixed;left:0;right:0;top:0;padding:2.5vh 0 5vh;text-align:center;pointer-events:none;transition:opacity .8s;z-index:5;
+    background:radial-gradient(ellipse 70% 100% at 50% 0%,rgba(8,4,20,.82) 0%,rgba(8,4,20,.5) 55%,transparent 100%)}
+  #introTitle .jamo{font-family:var(--sfont);font-weight:800;font-size:clamp(14px,3vw,24px);letter-spacing:.45em;margin-bottom:2px;color:#ffe3a3}
+  #introTitle .jamo span{display:inline-block;animation:wave 2.6s ease-in-out infinite;text-shadow:0 0 10px rgba(255,200,90,.6)}
+  @keyframes wave{0%,100%{transform:translateY(0);opacity:.75}50%{transform:translateY(-6px);opacity:1}}
+  #introTitle .row{display:inline-flex;align-items:center;gap:.08em;position:relative}
+  #introTitle .big{display:inline-flex;gap:.04em;font-family:var(--sfont);font-weight:900;font-size:clamp(56px,13vw,128px);line-height:1.1;
+    filter:drop-shadow(0 2px 0 #4a2a05) drop-shadow(0 0 26px rgba(255,190,80,.4))}
+  #introTitle .syl{position:relative;display:inline-block;--d:calc(var(--i) * .32s);
+    background:linear-gradient(172deg,#fffaf0 0%,#ffe08a 28%,#d99a2b 50%,#fff0b8 66%,#b8781a 100%);background-size:100% 200%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:sylIn .9s cubic-bezier(.2,.9,.3,1) both, shine 4s ease-in-out infinite;animation-delay:calc(var(--d) + .75s), calc(var(--d) + 2s)}
+  #introTitle .syl.gap{width:.28em}
+  #introTitle .syl::before{content:attr(data-j);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;
+    font-size:.36em;font-weight:800;color:#ffe9b0;-webkit-text-fill-color:#ffe9b0;text-shadow:0 0 12px rgba(255,200,90,.9);
+    animation:jamoMerge 1.25s ease-in both;animation-delay:var(--d)}
+  @keyframes jamoMerge{0%{opacity:0;letter-spacing:1.4em}35%{opacity:1;letter-spacing:.55em}75%{opacity:1;letter-spacing:0}100%{opacity:0;letter-spacing:-.2em;transform:translate(-50%,-50%) scale(2.2)}}
+  @keyframes sylIn{0%{opacity:0;transform:scale(.7);filter:blur(12px)}100%{opacity:1;transform:none;filter:blur(0)}}
+  @keyframes shine{0%,100%{background-position:0 0}50%{background-position:0 100%}}
+  #introTitle .seal{position:absolute;right:-2.7em;top:.5em;font-size:clamp(12px,2.7vw,26px);width:2.2em;height:2.2em;border-radius:.25em;
+    background:#c8102e;color:#fff4e0;display:flex;align-items:center;justify-content:center;font-family:var(--sfont);font-weight:900;
+    line-height:1.02;text-align:center;
+    box-shadow:inset 0 0 0 2px rgba(255,240,220,.35),0 4px 14px rgba(200,16,46,.5);transform:rotate(6deg);animation:stamp .5s cubic-bezier(.3,1.8,.5,1) 2.3s both}
+  @keyframes stamp{0%{opacity:0;transform:rotate(6deg) scale(2.4)}100%{opacity:1;transform:rotate(6deg) scale(1)}}
+  #introTitle .small{margin-top:4px;font-family:var(--sfont);font-weight:600;font-size:clamp(11px,2.3vw,16px);letter-spacing:.5em;color:#ffe3a3;opacity:.85;animation:rise 1.2s 2s ease-out both}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  #btnSkip{position:fixed;right:14px;bottom:18px;z-index:6}
+  #intro{position:fixed;inset:0;display:none;align-items:flex-end;justify-content:center;z-index:10;padding-bottom:4vh}
+  #intro.show{display:flex}
+  #intro .card{width:min(380px,calc(100% - 32px));padding:18px 20px 16px;border-radius:22px;animation:rise .6s ease-out both;max-height:72vh;overflow:auto}
+  #intro h1{margin:0 0 2px;font-family:var(--sfont);font-weight:900;font-size:24px;
+    background:linear-gradient(172deg,#fffaf0,#ffd56b 45%,#c98a1b);-webkit-background-clip:text;background-clip:text;color:transparent}
+  #intro p{margin:0 0 10px;font-size:12.5px;opacity:.8}
+  #intro .sec{font-size:12px;font-weight:800;opacity:.75;margin:8px 0 6px;letter-spacing:.05em}
+  #pcount{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+  #pcount button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;border-radius:10px;padding:8px 0;font-weight:800;font-size:13px}
+  #pcount button.on{background:linear-gradient(135deg,#ff3d8b,#a64dff);border-color:transparent;box-shadow:0 4px 12px rgba(255,61,139,.4)}
+  #pnames{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+  #pnames label{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border-radius:10px;padding:4px 8px}
+  #pnames i{width:10px;height:10px;border-radius:50%;flex:none}
+  #pnames input{width:100%;min-width:0;background:transparent;border:0;color:#fff;font-size:13px;font-weight:700;outline:none;padding:4px 0}
+  #intro ul{margin:8px 0 12px;padding-left:18px;font-size:12px;line-height:1.65;opacity:.85}
+  #intro kbd{background:rgba(255,255,255,.15);border-radius:5px;padding:0 5px;font-size:11px}
+  #btnStart{width:100%;padding:13px;border:0;border-radius:14px;font-size:17px;color:#fff;font-family:var(--hfont);letter-spacing:.1em;
+    background:linear-gradient(90deg,#ff3d8b,#a64dff);box-shadow:0 6px 18px rgba(255,61,139,.45)}
+  #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;z-index:20;background:#0c0822;text-align:center;padding:20px}
+</style>
+</head>
+<body class="in-intro">
+<div id="loading">3D 자음 뽑기 불러오는 중...</div>
+
+<div id="top">
+  <div id="bar">
+    <div class="pill glass">시간<b id="vTime">--</b></div>
+    <div class="pill glass">남은 자음<b id="vLeft">42</b></div>
+    <div class="sp"></div>
+    <button class="tbtn glass" id="btnView">시점: 내부캠</button>
+    <button class="tbtn glass" id="btnAim">조준선 ON</button>
+    <button class="tbtn glass" id="btnDiff">난이도: 보통</button>
+    <button class="tbtn glass" id="btnSound">소리 ON</button>
+    <button class="tbtn glass" id="btnShuffle">글자 섞기</button>
+    <button class="tbtn glass" id="btnResults">결과</button>
+  </div>
+  <div id="players"></div>
+</div>
+<div id="splash"><div class="av"></div><div class="nm"></div><div class="tt">차례!</div></div>
+<div id="msg" class="glass">조이스틱을 움직이면 시작!</div>
+<div id="carry" class="glass"><div class="big"></div><div class="nm"></div></div>
+
+<div id="joy"><div class="track"></div><i class="ar n"></i><i class="ar s"></i><i class="ar w"></i><i class="ar e"></i><div id="knob"></div></div>
+<div id="right">
+  <button id="btnDrop" aria-label="잡기">
+    <span class="halo"></span><span class="base"></span>
+    <span class="cap"><span class="en">GRAB</span><span class="ko">잡기</span></span>
+    <span class="burst"></span>
+  </button>
+</div>
+
+<div id="popup"><div class="card glass"><div class="sw"></div><div class="t">GET!</div><div class="n"></div><div class="s"></div></div></div>
+<div id="results"><div class="panel glass"><h2>뽑은 자음 모아보기</h2><div id="resList"></div>
+  <div class="rbtns"><button id="btnNew">새 게임</button><button class="pri" id="btnClose">계속하기</button></div></div></div>
+
+<div id="introTitle">
+  <div class="jamo"></div>
+  <div class="row"><div class="big">
+    <span class="syl" style="--i:0" data-j="ㅈㅏ">자</span><span class="syl" style="--i:1" data-j="ㅇㅡㅁ">음</span><span class="syl gap"></span><span class="syl" style="--i:2" data-j="ㅃㅗㅂ">뽑</span><span class="syl" style="--i:3" data-j="ㄱㅣ">기</span>
+  </div><div class="seal">한<br>글</div></div>
+  <div class="small">3D 한글 자음 뽑기 · HANGEUL CLAW MACHINE</div>
+</div>
+<button id="btnSkip" class="tbtn glass">건너뛰기 ›</button>
+<div id="intro">
+  <div class="card glass">
+    <h1>자음을 뽑아 보세요!</h1>
+    <p>집게로 자음을 잡아 왼쪽 앞 투입구에 떨어뜨리면 성공. 차례대로 한 번씩 뽑아요.</p>
+    <div class="sec">몇 명이 할까요?</div>
+    <div id="pcount"></div>
+    <div id="pnames"></div>
+    <ul>
+      <li>이동: 조이스틱 / <kbd>방향키</kbd> <kbd>WASD</kbd> · 잡기: 버튼 / <kbd>Space</kbd></li>
+      <li>시점 회전: 화면을 드래그 (내부캠에서도 가능), 휠로 확대</li>
+      <li>[난이도] 쉬움 · 보통 · 어려움, [글자 섞기] (<kbd>R</kbd>) 다시 배치, [결과]에서 모은 자음 보기</li>
+    </ul>
+    <button id="btnStart">게임 시작</button>
+  </div>
+</div>
+
+<script>
+  window.addEventListener('error', e => {
+    const l = document.getElementById('loading');
+    if (l) { l.style.display = 'flex'; l.textContent = '오류: ' + e.message; }
+  });
+</script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const V3 = THREE.Vector3;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const TIME_SCALE = clamp(parseInt(new URLSearchParams(location.search).get('speed')) || 1, 1, 6);
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const UP = new V3(0, 1, 0);
+const tmpV = new V3(), tmpV2 = new V3(), tmpQ = new THREE.Quaternion(), tmpQ2 = new THREE.Quaternion();
+const HFONT = '"Black Han Sans", "Malgun Gothic", sans-serif';
+
+/* ================= Renderer / Scene ================= */
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0822);
+scene.fog = new THREE.Fog(0x0c0822, 14, 34);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.enablePan = false;
+controls.minDistance = 3; controls.maxDistance = 20;
+controls.maxPolarAngle = Math.PI * 0.56;
+controls.target.set(0, 0.85, 0);
+controls.enabled = false;
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.4, 1.25);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* ================= Textures (redrawn once web fonts arrive) ================= */
+const redrawables = [];
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); draw(x, w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  redrawables.push(() => { x.clearRect(0, 0, w, h); draw(x, w, h); t.needsUpdate = true; });
+  return t;
+}
+function star(c, x, y, r, n = 5) {
+  c.beginPath();
+  for (let i = 0; i < n * 2; i++) { const a = i * Math.PI / n - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  c.closePath(); c.fill();
+}
+const JAMO = 'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ';
+const carpetTex = canvasTex(512, 512, (c, w, h) => {
+  c.fillStyle = '#150d2c'; c.fillRect(0, 0, w, h);
+  const cols = ['#ff3dd6', '#22e6ff', '#ffd23d', '#7d5cff']; c.lineWidth = 4;
+  for (let i = 0; i < 60; i++) {
+    c.globalAlpha = 0.5; c.strokeStyle = cols[i % 4];
+    const x = rand(30, w - 30), y = rand(30, h - 30), s = rand(8, 20), t = i % 3;
+    c.beginPath();
+    if (t === 0) c.arc(x, y, s, 0, 7);
+    else if (t === 1) { c.moveTo(x - s, y); c.lineTo(x + s, y); c.moveTo(x, y - s); c.lineTo(x, y + s); }
+    else { c.moveTo(x, y - s); c.lineTo(x + s, y + s); c.lineTo(x - s, y + s); c.closePath(); }
+    c.stroke();
+  }
+  c.globalAlpha = 1;
+});
+carpetTex.wrapS = carpetTex.wrapT = THREE.RepeatWrapping; carpetTex.repeat.set(9, 9);
+const backTex = canvasTex(512, 512, (c, w, h) => {
+  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#41208a'); g.addColorStop(1, '#170a3d');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 16; i++) {
+    const x = (i * 131) % w, y = (i * 83 + 40) % h, r = 30 + (i * 13) % 50;
+    const rg = c.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, i % 2 ? 'rgba(255,110,220,.35)' : 'rgba(80,220,255,.3)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = rg; c.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let i = 0; i < 14; i++) {
+    c.font = `${60 + (i * 17) % 40}px ${HFONT}`;
+    c.fillStyle = `rgba(255,255,255,${(0.06 + (i % 4) * 0.025).toFixed(3)})`;
+    c.save(); c.translate(40 + (i * 157) % (w - 80), 40 + (i * 101) % (h - 80)); c.rotate(((i % 5) - 2) * 0.15); c.fillText(JAMO[i], 0, 0); c.restore();
+  }
+  c.fillStyle = '#fff';
+  for (let i = 0; i < 120; i++) { c.globalAlpha = (i % 10) / 10; c.fillRect((i * 211) % w, (i * 97) % h, 2, 2); }
+  c.globalAlpha = 0.9;
+  for (let i = 0; i < 10; i++) { c.fillStyle = ['#ffd23d', '#ff9ee8', '#9ff3ff'][i % 3]; star(c, 20 + (i * 173) % (w - 40), 20 + (i * 89) % (h - 40), 6 + i % 8); }
+  c.globalAlpha = 1;
+});
+const floorTex = canvasTex(512, 512, (c, w, h) => {
+  c.fillStyle = '#4b2590'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    c.fillStyle = (x + y) % 2 ? 'rgba(255,255,255,.10)' : 'rgba(255,120,220,.16)';
+    c.beginPath(); c.arc(x * 64 + 32 + (y % 2) * 16, y * 64 + 32, 12, 0, 7); c.fill();
+  }
+});
+const signTex = canvasTex(1024, 256, (c, w, h) => {
+  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#2c0b52'); g.addColorStop(1, '#12052a');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  let fs = 140; c.font = `900 ${fs}px Hahmlet, ${HFONT}`;
+  while (c.measureText('자음 뽑기').width > w * 0.78) { fs -= 4; c.font = `900 ${fs}px Hahmlet, ${HFONT}`; }
+  const gg = c.createLinearGradient(0, h * 0.1, 0, h * 0.7); gg.addColorStop(0, '#fffaf0'); gg.addColorStop(0.45, '#ffd56b'); gg.addColorStop(1, '#d08a1e');
+  c.shadowColor = '#ffb347'; c.shadowBlur = 26; c.fillStyle = gg;
+  c.fillText('자음 뽑기', w / 2, h * 0.43); c.fillText('자음 뽑기', w / 2, h * 0.43);
+  c.shadowColor = '#22e6ff'; c.shadowBlur = 14; c.font = `44px ${HFONT}`; c.fillStyle = '#c4f9ff';
+  c.fillText('ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ ㅈ ㅊ ㅋ ㅌ ㅍ ㅎ', w / 2, h * 0.84);
+});
+const frontTex = canvasTex(1024, 682, (c, w, h) => {
+  c.fillStyle = '#ff3d8b'; c.fillRect(0, 0, w, h);
+  c.save(); c.globalAlpha = 0.16; c.fillStyle = '#fff';
+  for (let x = -h; x < w; x += 64) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 30, 0); c.lineTo(x + 30 + h, h); c.lineTo(x + h, h); c.closePath(); c.fill(); }
+  c.restore();
+  const X = x => (x + 1.65) / 3.3 * w, Y = y => (-0.05 - y) / 2.2 * h;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = '#2a0b4a'; c.beginPath(); c.roundRect(X(-1.6), Y(-0.98), X(-0.5) - X(-1.6), Y(-1.3) - Y(-0.98), 20); c.fill();
+  c.font = '900 52px "Arial Black", sans-serif'; c.fillStyle = '#ffd23d'; c.fillText('PRIZE ▼', X(-1.05), Y(-1.14));
+  const cx = X(0.75), cy = Y(-1.32), R = 150;
+  c.fillStyle = '#2a0b4a'; c.beginPath(); c.arc(cx, cy, R, 0, 7); c.fill();
+  c.lineWidth = 12; c.strokeStyle = '#ffd23d'; c.stroke();
+  c.fillStyle = '#fff'; c.font = '900 56px "Arial Black", sans-serif'; c.fillText('FREE', cx, cy - 42); c.fillText('PLAY', cx, cy + 14);
+  c.fillStyle = '#22e6ff'; c.font = `40px ${HFONT}`; c.fillText('자음 뽑기', cx, cy + 72);
+  c.fillStyle = '#ffd23d';
+  for (let i = 0; i < 10; i++) star(c, X(0.2) + (i * 53) % (X(1.55) - X(0.2)), Y(-1.95) + (i * 7) % 20, 8 + i % 8);
+});
+function labelTex(text, color = '#ffd23d', bg = '#1a0b30') {
+  return canvasTex(256, 96, (c, w, h) => {
+    c.fillStyle = bg; c.beginPath(); c.roundRect(4, 4, w - 8, h - 8, 18); c.fill();
+    c.font = '900 54px "Arial Black", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.shadowColor = color; c.shadowBlur = 12; c.fillStyle = color; c.fillText(text, w / 2, h / 2 + 2);
+  });
+}
+Promise.all([
+  document.fonts.load('900 80px Hahmlet', '3D 자음뽑기한글' + JAMO),
+  document.fonts.load('60px "Black Han Sans"', JAMO + '자음뽑기잡기플레이어'),
+]).then(() => redrawables.forEach(f => f())).catch(() => {});
+
+/* ================= Materials ================= */
+const PCOLORS = ['#ff4f8b', '#22c8ff', '#ffc93d', '#5fdc7a', '#b07cff', '#ff8a3d'];
+const M = {
+  body: new THREE.MeshPhysicalMaterial({ color: 0xff3d8b, metalness: 0.15, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.12 }),
+  bodyDark: new THREE.MeshPhysicalMaterial({ color: 0x2a1650, metalness: 0.3, roughness: 0.38, clearcoat: 0.7 }),
+  chrome: new THREE.MeshStandardMaterial({ color: 0xe8e8f2, metalness: 1, roughness: 0.16 }),
+  darkMetal: new THREE.MeshStandardMaterial({ color: 0x3a3a4c, metalness: 0.85, roughness: 0.35 }),
+  rubber: new THREE.MeshStandardMaterial({ color: 0x141418, roughness: 0.75 }),
+  glass: new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: 0.03, transparent: true, opacity: 0.05, envMapIntensity: 0.35, side: THREE.DoubleSide, depthWrite: false }),
+  acrylic: new THREE.MeshPhysicalMaterial({ color: 0xbfeaff, metalness: 0, roughness: 0.05, transparent: true, opacity: 0.22, envMapIntensity: 0.6, side: THREE.DoubleSide, depthWrite: false }),
+  neonCyan: new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x22e6ff, emissiveIntensity: 3 }),
+  neonPink: new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xff3dd6, emissiveIntensity: 3 }),
+  led: new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xfff3e6, emissiveIntensity: 2.2 }),
+  yellow: new THREE.MeshStandardMaterial({ color: 0xffd23d, roughness: 0.35, metalness: 0.1 }),
+  black: new THREE.MeshStandardMaterial({ color: 0x0b0b10, roughness: 0.3, metalness: 0.2 }),
+  hole: new THREE.MeshBasicMaterial({ color: 0x040208 }),
+  red: new THREE.MeshPhysicalMaterial({ color: 0xe0103a, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05, emissive: 0x550010, emissiveIntensity: 1 }),
+};
+const ringMat = new THREE.MeshPhysicalMaterial({ color: PCOLORS[0], roughness: 0.25, clearcoat: 1, emissive: PCOLORS[0], emissiveIntensity: 0.35 });
+
+/* ================= Room & Lights ================= */
+const roomFloor = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), new THREE.MeshStandardMaterial({ map: carpetTex, roughness: 0.6, metalness: 0.1 }));
+roomFloor.rotation.x = -Math.PI / 2; roomFloor.position.y = -2.3; roomFloor.receiveShadow = true; scene.add(roomFloor);
+scene.add(new THREE.HemisphereLight(0xc8b4ff, 0x201030, 0.45));
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
+key.position.set(4, 9, 7); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -6, right: 6, top: 7, bottom: -5, near: 1, far: 25 });
+key.shadow.bias = -0.0005; scene.add(key);
+const pinkL = new THREE.PointLight(0xff3dd6, 30, 0, 2); pinkL.position.set(-4.5, 2.5, 3.5); scene.add(pinkL);
+const cyanL = new THREE.PointLight(0x22e6ff, 30, 0, 2); cyanL.position.set(4.5, 1, 3.5); scene.add(cyanL);
+const spot = new THREE.SpotLight(0xfff2e6, 22, 0, 1.0, 0.55, 2);
+spot.position.set(0, 2.96, 0.3); spot.target.position.set(0, 0, -0.1);
+spot.castShadow = true; spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.0008; spot.shadow.normalBias = 0.02;
+spot.shadow.camera.near = 0.2; spot.shadow.camera.far = 6;
+scene.add(spot, spot.target);
+const fill = new THREE.PointLight(0xffe0f4, 3, 0, 2); fill.position.set(0, 2.5, 1.3); scene.add(fill);
+
+/* ================= Machine ================= */
+const machine = new THREE.Group(); scene.add(machine);
+function add(geo, mat, x = 0, y = 0, z = 0, parent = machine, cast = true) {
+  const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z);
+  m.castShadow = cast; m.receiveShadow = true; parent.add(m); return m;
+}
+add(new RoundedBoxGeometry(3.4, 2.27, 3.4, 4, 0.06), M.body, 0, -1.165, 0);
+add(new THREE.PlaneGeometry(3.3, 2.2), new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.4, metalness: 0.05, emissiveMap: frontTex, emissive: 0xffffff, emissiveIntensity: 0.12 }), 0, -1.15, 1.702, machine, false);
+const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.55 });
+// bigger prize chute (1.1 x 1.1) for the bigger letters
+add(new THREE.BoxGeometry(1.9, 0.03, 3.0), floorMat, 0.55, -0.015, 0, machine, false);
+add(new THREE.BoxGeometry(1.1, 0.03, 1.9), floorMat, -0.95, -0.015, -0.55, machine, false);
+add(new THREE.PlaneGeometry(1.1, 1.1), M.hole, -0.95, -0.025, 0.95, machine, false).rotation.x = -Math.PI / 2;
+// taller acrylic guard so the big pile can't spill into the chute
+add(new THREE.BoxGeometry(0.035, 1.05, 1.1), M.acrylic, -0.4, 0.525, 0.95, machine, false);
+add(new THREE.BoxGeometry(1.1, 1.05, 0.035), M.acrylic, -0.95, 0.525, 0.4, machine, false);
+add(new THREE.BoxGeometry(0.05, 0.04, 1.15), M.yellow, -0.4, 1.06, 0.95);
+add(new THREE.BoxGeometry(1.15, 0.04, 0.05), M.yellow, -0.95, 1.06, 0.4);
+for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new RoundedBoxGeometry(0.18, 3.02, 0.18, 2, 0.03), M.body, sx * 1.6, 1.5, sz * 1.6);
+add(new THREE.PlaneGeometry(3.04, 3.0), M.glass, 0, 1.5, 1.53, machine, false);
+add(new THREE.PlaneGeometry(3.04, 3.0), M.glass, -1.53, 1.5, 0, machine, false).rotation.y = Math.PI / 2;
+add(new THREE.PlaneGeometry(3.04, 3.0), M.glass, 1.53, 1.5, 0, machine, false).rotation.y = Math.PI / 2;
+add(new THREE.PlaneGeometry(3.1, 3.0), new THREE.MeshStandardMaterial({ map: backTex, roughness: 0.7, emissiveMap: backTex, emissive: 0xffffff, emissiveIntensity: 0.25 }), 0, 1.5, -1.53, machine, false);
+add(new RoundedBoxGeometry(3.4, 0.9, 3.4, 4, 0.06), M.body, 0, 3.45, 0);
+add(new THREE.PlaneGeometry(3.1, 0.75), new THREE.MeshStandardMaterial({ map: signTex, emissiveMap: signTex, emissive: 0xffffff, emissiveIntensity: 1.1, roughness: 0.4 }), 0, 3.45, 1.705, machine, false);
+const bulbs = [];
+const bulbGeo = new THREE.SphereGeometry(0.035, 12, 8);
+for (let i = 0; i < 16; i++) for (const y of [3.06, 3.84]) {
+  const mat = new THREE.MeshStandardMaterial({ color: 0x332200, emissive: 0xffc64d, emissiveIntensity: 1 });
+  bulbs.push(add(bulbGeo, mat, -1.58 + i * (3.16 / 15), y, 1.73, machine, false));
+}
+add(new THREE.CylinderGeometry(0.18, 0.22, 0.12, 24), M.darkMetal, 0, 3.96, 0);
+const beaconMat = new THREE.MeshStandardMaterial({ color: 0x330011, emissive: 0xff2fa0, emissiveIntensity: 1.2, roughness: 0.2 });
+add(new THREE.SphereGeometry(0.17, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), beaconMat, 0, 4.02, 0, machine, false);
+const tubeV = new THREE.CylinderGeometry(0.022, 0.022, 3.0, 10);
+add(tubeV, M.neonCyan, -1.6, 1.5, 1.71, machine, false); add(tubeV, M.neonCyan, 1.6, 1.5, 1.71, machine, false);
+add(new THREE.CylinderGeometry(0.022, 0.022, 3.2, 10), M.neonPink, 0, 2.98, 1.71, machine, false).rotation.z = Math.PI / 2;
+add(new THREE.CylinderGeometry(0.022, 0.022, 3.2, 10), M.neonPink, 0, -2.22, 1.72, machine, false).rotation.z = Math.PI / 2;
+add(new THREE.BoxGeometry(2.9, 0.02, 0.05), M.led, 0, 2.975, 1.42, machine, false);
+add(new THREE.BoxGeometry(0.06, 0.06, 3.0), M.chrome, -1.44, 2.92, 0);
+add(new THREE.BoxGeometry(0.06, 0.06, 3.0), M.chrome, 1.44, 2.92, 0);
+const bridge = add(new THREE.BoxGeometry(2.94, 0.06, 0.12), M.darkMetal, 0, 2.9, 0);
+const carriageMesh = new THREE.Group(); machine.add(carriageMesh);
+add(new RoundedBoxGeometry(0.26, 0.13, 0.26, 2, 0.02), M.darkMetal, 0, 0, 0, carriageMesh);
+add(new THREE.CylinderGeometry(0.06, 0.06, 0.14, 16), M.chrome, 0, 0.04, 0, carriageMesh).rotation.z = Math.PI / 2;
+add(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 12), M.yellow, 0, -0.08, 0, carriageMesh);
+add(new THREE.BoxGeometry(0.85, 0.5, 0.1), M.hole, -1.05, -1.62, 1.69, machine, false);
+for (const [w, h, x, y] of [[0.95, 0.05, 0, 0.27], [0.95, 0.05, 0, -0.27], [0.05, 0.55, -0.45, 0], [0.05, 0.55, 0.45, 0]])
+  add(new THREE.BoxGeometry(w, h, 0.05), M.yellow, -1.05 + x, -1.62 + y, 1.75);
+const binLight = new THREE.PointLight(0xffd23d, 0, 1.5, 2); binLight.position.set(-1.05, -1.5, 1.95); scene.add(binLight);
+const panel = new THREE.Group(); panel.position.set(0, -0.45, 1.96); panel.rotation.x = 0.16; machine.add(panel);
+add(new RoundedBoxGeometry(3.0, 0.3, 0.55, 3, 0.05), M.bodyDark, 0, 0, 0, panel);
+add(new THREE.CylinderGeometry(0.13, 0.15, 0.03, 32), M.black, 0.1, 0.165, 0, panel);
+const stickPivot = new THREE.Group(); stickPivot.position.set(0.1, 0.18, 0); panel.add(stickPivot);
+add(new THREE.CylinderGeometry(0.018, 0.018, 0.22, 10), M.chrome, 0, 0.11, 0, stickPivot);
+add(new THREE.SphereGeometry(0.06, 24, 16), M.red, 0, 0.24, 0, stickPivot);
+add(new THREE.CylinderGeometry(0.14, 0.15, 0.03, 40), M.black, 0.85, 0.165, 0, panel);
+add(new THREE.TorusGeometry(0.12, 0.022, 16, 48), M.chrome, 0.85, 0.18, 0, panel).rotation.x = Math.PI / 2;
+const btnCap = add(new THREE.SphereGeometry(0.105, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), M.red, 0.85, 0.172, 0, panel);
+btnCap.scale.y = 0.55;
+const grabLabel = add(new THREE.PlaneGeometry(0.3, 0.11), new THREE.MeshStandardMaterial({ map: labelTex('GRAB', '#ff6b8a'), emissiveMap: labelTex('GRAB', '#ff6b8a'), emissive: 0xffffff, emissiveIntensity: 0.8, transparent: true }), 0.85, 0.152, 0.205, panel, false);
+grabLabel.rotation.x = -Math.PI / 2;
+
+/* ================= Claw rig ================= */
+const ROOT_Y = 2.79, CABLE_REST = 0.35, OPEN = 0.62, CLOSED = -0.16, REST = 0.06;
+const CB = 1.0, HOME = { x: -0.95, z: 0.95 }; // claw axis limit: even a claw wrapped round a big letter stays inside the glass
+const clawRoot = new THREE.Group(); machine.add(clawRoot);
+const swing = new THREE.Group(); clawRoot.add(swing);
+const cable = add(new THREE.CylinderGeometry(0.011, 0.011, 1, 8), M.darkMetal, 0, 0, 0, swing);
+const CLAW_S = 1.25; // bigger claw for the bigger letters
+const head = new THREE.Group(); swing.add(head); head.scale.setScalar(CLAW_S);
+add(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 12), M.chrome, 0, -0.01, 0, head);
+add(new THREE.CylinderGeometry(0.1, 0.15, 0.15, 28), M.chrome, 0, -0.08, 0, head);
+add(new THREE.TorusGeometry(0.148, 0.022, 10, 36), ringMat, 0, -0.14, 0, head).rotation.x = Math.PI / 2;
+add(new THREE.SphereGeometry(0.11, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.darkMetal, 0, -0.15, 0, head);
+function capsuleBetween(a, b, r, mat, parent) {
+  const dir = new V3().subVectors(b, a), len = dir.length();
+  const m = add(new THREE.CapsuleGeometry(r, len, 6, 12), mat, 0, 0, 0, parent);
+  m.position.copy(a).addScaledVector(dir, 0.5); m.quaternion.setFromUnitVectors(UP, dir.normalize()); return m;
+}
+// collision samples: every visible part of the claw is covered by spheres
+const clawSamples = [];
+function addSample(parent, p, r, finger) {
+  const o = new THREE.Object3D(); o.position.copy(p); parent.add(o);
+  const s = { obj: o, r: r * CLAW_S, finger, pos: new V3(), prev: new V3(), vel: new V3() }; clawSamples.push(s); return s;
+}
+addSample(head, new V3(0, -0.085, 0), 0.15, -1);
+addSample(head, new V3(0, -0.17, 0), 0.105, -1);
+const fingers = [];
+for (let i = 0; i < 3; i++) {
+  const arm = new THREE.Group(); arm.rotation.y = i * Math.PI * 2 / 3 + Math.PI / 2; head.add(arm);
+  add(new THREE.BoxGeometry(0.06, 0.06, 0.07), M.darkMetal, 0.115, -0.13, 0, arm);
+  const hinge = new THREE.Group(); hinge.position.set(0.12, -0.13, 0); arm.add(hinge);
+  const O = new V3(), E = new V3(0.15, -0.36, 0), T = new V3(0.04, -0.68, 0);
+  add(new THREE.SphereGeometry(0.026, 12, 10), M.chrome, 0, 0, 0, hinge);
+  capsuleBetween(O, E, 0.024, M.chrome, hinge);
+  add(new THREE.SphereGeometry(0.032, 14, 10), M.chrome, E.x, E.y, 0, hinge);
+  capsuleBetween(E, T, 0.021, M.chrome, hinge);
+  const pad = add(new THREE.SphereGeometry(0.034, 14, 10), M.rubber, T.x, T.y, 0, hinge);
+  pad.scale.set(0.8, 1.1, 1.3);
+  const samples = [];
+  for (const t of [0.35, 0.7, 1]) samples.push(addSample(hinge, new V3().lerpVectors(O, E, t), 0.033, i));
+  for (const t of [0.25, 0.5, 0.75]) samples.push(addSample(hinge, new V3().lerpVectors(E, T, t), 0.026, i));
+  samples.push(addSample(hinge, T, 0.04, i));
+  fingers.push({ hinge, angle: REST, target: REST, samples, stopped: false, contact: null, contactY: 0 });
+}
+const laserMat = new THREE.MeshBasicMaterial({ color: 0xff2a4a, transparent: true, opacity: 0.35, depthWrite: false });
+const laser = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 1, 6), laserMat); scene.add(laser);
+const laserDot = new THREE.Mesh(new THREE.RingGeometry(0.03, 0.05, 24), new THREE.MeshBasicMaterial({ color: 0xff2a4a, transparent: true, opacity: 0.8, depthWrite: false }));
+laserDot.rotation.x = -Math.PI / 2; scene.add(laserDot);
+let aimOn = true;
+
+/* ================= Prizes: 3D consonants with exact stroke colliders ================= */
+let PRIMS = null;
+const R = (x1, y1, x2, y2, r = 0.06) => {
+  if (PRIMS) PRIMS.push({ t: 'box', cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, hx: (x2 - x1) / 2, hy: (y2 - y1) / 2, a: 0 });
+  const s = new THREE.Shape(); r = Math.min(r, (x2 - x1) / 2, (y2 - y1) / 2);
+  s.moveTo(x1 + r, y1); s.lineTo(x2 - r, y1); s.quadraticCurveTo(x2, y1, x2, y1 + r);
+  s.lineTo(x2, y2 - r); s.quadraticCurveTo(x2, y2, x2 - r, y2); s.lineTo(x1 + r, y2);
+  s.quadraticCurveTo(x1, y2, x1, y2 - r); s.lineTo(x1, y1 + r); s.quadraticCurveTo(x1, y1, x1 + r, y1); return s;
+};
+const S = (x1, y1, x2, y2, w) => {
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), nx = -dy / L * w / 2, ny = dx / L * w / 2;
+  if (PRIMS) PRIMS.push({ t: 'box', cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, hx: L / 2, hy: w / 2, a: Math.atan2(dy, dx) });
+  const s = new THREE.Shape(); s.moveTo(x1 + nx, y1 + ny); s.lineTo(x2 + nx, y2 + ny); s.lineTo(x2 - nx, y2 - ny); s.lineTo(x1 - nx, y1 - ny); s.closePath(); return s;
+};
+const RING = (cx, cy, ro, ri) => {
+  if (PRIMS) PRIMS.push({ t: 'ring', cx, cy, ro, ri });
+  const s = new THREE.Shape(); s.absarc(cx, cy, ro, 0, Math.PI * 2, false);
+  const h = new THREE.Path(); h.absarc(cx, cy, ri, 0, Math.PI * 2, true); s.holes.push(h); return s;
+};
+const SQRING = (o, i) => {
+  if (PRIMS) {
+    const m = (o + i) / 2, t = (o - i) / 2;
+    PRIMS.push({ t: 'box', cx: 0, cy: m, hx: o, hy: t, a: 0 }, { t: 'box', cx: 0, cy: -m, hx: o, hy: t, a: 0 },
+               { t: 'box', cx: -m, cy: 0, hx: t, hy: o, a: 0 }, { t: 'box', cx: m, cy: 0, hx: t, hy: o, a: 0 });
+  }
+  const saved = PRIMS; PRIMS = null; const s = R(-o, -o, o, o, 0.08); PRIMS = saved;
+  const h = new THREE.Path(); h.moveTo(-i, -i); h.lineTo(-i, i); h.lineTo(i, i); h.lineTo(i, -i); h.closePath(); s.holes.push(h); return s;
+};
+const CONSONANTS = [
+  { c: 'ㄱ', n: '기역', s: () => [R(-.45, .23, .45, .45), R(.23, -.45, .45, .45)] },
+  { c: 'ㄴ', n: '니은', s: () => [R(-.45, -.45, -.23, .45), R(-.45, -.45, .45, -.23)] },
+  { c: 'ㄷ', n: '디귿', s: () => [R(-.45, .23, .45, .45), R(-.45, -.45, -.23, .45), R(-.45, -.45, .45, -.23)] },
+  { c: 'ㄹ', n: '리을', s: () => [R(-.45, .29, .45, .45), R(.29, -.08, .45, .45), R(-.45, -.08, .45, .08), R(-.45, -.45, -.29, .08), R(-.45, -.45, .45, -.29)] },
+  { c: 'ㅁ', n: '미음', s: () => [SQRING(.45, .23)] },
+  { c: 'ㅂ', n: '비읍', s: () => [R(-.45, -.45, -.24, .45), R(.24, -.45, .45, .45), R(-.45, -.09, .45, .1), R(-.45, -.45, .45, -.25)] },
+  { c: 'ㅅ', n: '시옷', s: () => [S(.04, .45, -.4, -.42, .22), S(-.04, .12, .4, -.42, .22)] },
+  { c: 'ㅇ', n: '이응', s: () => [RING(0, 0, .46, .24)] },
+  { c: 'ㅈ', n: '지읒', s: () => [R(-.42, .27, .42, .45), S(.03, .33, -.4, -.43, .2), S(-.03, .05, .4, -.43, .2)] },
+  { c: 'ㅊ', n: '치읓', s: () => [R(-.1, .36, .1, .52), R(-.42, .17, .42, .33), S(.03, .22, -.4, -.45, .19), S(-.03, -.02, .4, -.45, .19)] },
+  { c: 'ㅋ', n: '키읔', s: () => [R(-.45, .25, .45, .45), R(.25, -.45, .45, .45), R(-.4, -.08, .45, .1)] },
+  { c: 'ㅌ', n: '티읕', s: () => [R(-.45, .29, .45, .45), R(-.45, -.45, -.29, .45), R(-.45, -.08, .4, .08), R(-.45, -.45, .45, -.29)] },
+  { c: 'ㅍ', n: '피읖', s: () => [R(-.45, .27, .45, .45), R(-.45, -.45, .45, -.27), R(-.27, -.3, -.09, .3), R(.09, -.3, .27, .3)] },
+  { c: 'ㅎ', n: '히읗', s: () => [R(-.1, .37, .1, .52), R(-.4, .2, .4, .34), RING(0, -.18, .3, .14)] },
+];
+const SC = 0.62, BEV = 0.045, DEPTH = 0.2, BEVT = 0.07;
+const LETTERS = CONSONANTS.map((d, i) => {
+  PRIMS = []; const shapes = d.s(); const prims = PRIMS; PRIMS = null;
+  const g = new THREE.ExtrudeGeometry(shapes, { depth: DEPTH, bevelEnabled: true, bevelThickness: BEVT, bevelSize: BEV, bevelSegments: 5, curveSegments: 28 });
+  g.computeBoundingBox(); const c = new V3(); g.boundingBox.getCenter(c);
+  g.translate(-c.x, -c.y, -c.z); g.scale(SC, SC, SC); g.computeVertexNormals();
+  const hz = (DEPTH / 2 + BEVT) * SC, cz = (DEPTH / 2 - c.z) * SC;
+  const P = prims.map(p => p.t === 'box'
+    ? { t: 'box', cx: (p.cx - c.x) * SC, cy: (p.cy - c.y) * SC, cz, hx: (p.hx + BEV) * SC, hy: (p.hy + BEV) * SC, hz, c: Math.cos(p.a), s: Math.sin(p.a) }
+    : { t: 'ring', cx: (p.cx - c.x) * SC, cy: (p.cy - c.y) * SC, cz, ro: (p.ro + BEV) * SC, ri: Math.max(0, p.ri - BEV) * SC, hz });
+  // physics shape: chains of balls that follow every stroke (so letters can lie flat and pile up)
+  const bl = [], br = [];
+  for (const q of P) {
+    if (q.t === 'box') {
+      const along = q.hx >= q.hy, long = Math.max(q.hx, q.hy), r = Math.min(Math.min(q.hx, q.hy), q.hz);
+      const ux = along ? q.c : -q.s, uy = along ? q.s : q.c, L = Math.max(0, long - r);
+      const n = Math.max(1, Math.ceil((2 * L) / (r * 1.25)) + 1);
+      for (let k = 0; k < n; k++) { const t = n === 1 ? 0 : -L + 2 * L * k / (n - 1); bl.push(new V3(q.cx + t * ux, q.cy + t * uy, q.cz)); br.push(r); }
+    } else {
+      const rr = (q.ro + q.ri) / 2, r = Math.min((q.ro - q.ri) / 2, q.hz), n = Math.max(6, Math.ceil(2 * Math.PI * rr / (r * 1.25)));
+      for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2; bl.push(new V3(q.cx + Math.cos(a) * rr, q.cy + Math.sin(a) * rr, q.cz)); br.push(r); }
+    }
+  }
+  const R0 = Math.max(...bl.map((v, k) => v.length() + br[k]));
+  const color = new THREE.Color().setHSL(i / CONSONANTS.length, 0.85, 0.52);
+  const mat = new THREE.MeshPhysicalMaterial({ color, roughness: 0.3, clearcoat: 0.9, clearcoatRoughness: 0.2, envMapIntensity: 0.5 });
+  return { ...d, geo: g, prims: P, color, mat, bl, br, R0 };
+});
+// signed distance from a world point to a letter's solid strokes (normal -> LQ.n, world space, pointing out of the letter)
+const LQ = { n: new V3() };
+const qv = new V3(), nl = new V3(), qInv = new THREE.Quaternion();
+function letterDist(p, w) {
+  qInv.copy(p.mesh.quaternion).invert();
+  qv.copy(w).sub(p.pos).applyQuaternion(qInv);
+  let best = Infinity;
+  for (const pr of p.prims) {
+    const z = qv.z - pr.cz, dz = Math.abs(z) - pr.hz, sz = z < 0 ? -1 : 1, oz = Math.max(dz, 0);
+    if (pr.t === 'box') {
+      const x0 = qv.x - pr.cx, y0 = qv.y - pr.cy;
+      const x = x0 * pr.c + y0 * pr.s, y = -x0 * pr.s + y0 * pr.c;
+      const dx = Math.abs(x) - pr.hx, dy = Math.abs(y) - pr.hy, sx = x < 0 ? -1 : 1, sy = y < 0 ? -1 : 1;
+      const ox = Math.max(dx, 0), oy = Math.max(dy, 0), out = Math.hypot(ox, oy, oz);
+      let d, lx = 0, ly = 0, lz = 0;
+      if (out > 0) { d = out; lx = sx * ox / out; ly = sy * oy / out; lz = sz * oz / out; }
+      else { d = Math.max(dx, dy, dz); if (d === dx) lx = sx; else if (d === dy) ly = sy; else lz = sz; }
+      if (d < best) { best = d; nl.set(lx * pr.c - ly * pr.s, lx * pr.s + ly * pr.c, lz); }
+    } else {
+      const x = qv.x - pr.cx, y = qv.y - pr.cy, r = Math.hypot(x, y) || 1e-6, ux = x / r, uy = y / r;
+      const dOut = r - pr.ro, dIn = pr.ri - r, d2 = Math.max(dOut, dIn), rs = dOut > dIn ? 1 : -1;
+      const o2 = Math.max(d2, 0), out = Math.hypot(o2, oz);
+      let d;
+      if (out > 0) { d = out; if (d < best) { best = d; nl.set(rs * ux * o2 / out, rs * uy * o2 / out, sz * oz / out); } }
+      else { d = Math.max(d2, dz); if (d < best) { best = d; if (d === d2) nl.set(rs * ux, rs * uy, 0); else nl.set(0, 0, sz); } }
+    }
+  }
+  LQ.n.copy(nl).applyQuaternion(p.mesh.quaternion);
+  return best;
+}
+
+const FULL = 42; let refillPending = false;
+let letterQueue = [];
+function nextLetterIndex() {
+  if (!letterQueue.length) { letterQueue = LETTERS.map((_, i) => i); for (let i = letterQueue.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [letterQueue[i], letterQueue[j]] = [letterQueue[j], letterQueue[i]]; } }
+  return letterQueue.pop();
+}
+const prizes = []; let pid = 0;
+function addPrize(pos) {
+  const L = LETTERS[nextLetterIndex()];
+  const mesh = new THREE.Mesh(L.geo, L.mat); mesh.castShadow = true; mesh.receiveShadow = true;
+  // most letters lie face-up (readable from the claw cam), some stand; they settle back to this pose
+  const flat = Math.random() < 0.72;
+  const qBase = new THREE.Quaternion().setFromEuler(flat ? new THREE.Euler(-Math.PI / 2 + rand(-0.3, 0.3), 0, rand(-0.3, 0.3)) : new THREE.Euler(rand(-0.2, 0.2), 0, rand(-0.2, 0.2)));
+  const restQ = new THREE.Quaternion().setFromAxisAngle(UP, rand(-0.7, 0.7)).multiply(qBase);
+  mesh.quaternion.copy(restQ);
+  const r = L.R0;
+  const p = { mesh, r, c: L.c, name: L.n, color: L.color, prims: L.prims, fric: 0.12, restQ,
+    bl: L.bl, br: L.br, wo: L.bl.map(() => new V3()),
+    pos: pos.clone(), vel: new V3(), ang: new V3(), im: 1, held: false, grounded: false, id: pid++ };
+  mesh.position.copy(pos); scene.add(mesh); prizes.push(p); return p;
+}
+function randomSpot() { for (;;) { const x = rand(-1.15, 1.15), z = rand(-1.15, 1.15); if (x < -0.05 && z > 0.05) continue; return [x, z]; } }
+function spawn(n, y0, dy) { for (let i = 0; i < n; i++) { const [x, z] = randomSpot(); addPrize(new V3(x, y0 + i * dy, z)); } }
+
+/* ================= Physics ================= */
+const G = 20, REST_E = 0.2;
+const BOXES = [
+  [-0.4, -0.6, -1.5, 1.5, 0, 1.5], [-1.5, -0.6, -1.5, -0.4, 0, 0.4],
+  [-0.42, 0, 0.4, -0.38, 1.05, 1.5], [-1.5, 0, 0.38, -0.4, 1.05, 0.42],
+  [-2, -3, -2, -1.5, 3.2, 2], [1.5, -3, -2, 2, 3.2, 2], [-2, -3, -2, 2, 3.2, -1.5], [-2, -3, 1.5, 2, 3.2, 2],
+  [-2, 2.98, -2, 2, 3.8, 2], // ceiling
+].map(a => ({ min: new V3(a[0], a[1], a[2]), max: new V3(a[3], a[4], a[5]) }));
+const CLAW_STATIC = BOXES.slice(0, 4); // play floor + chute barriers
+let initializing = true;
+function sphereBoxPen(c, r, b) {
+  const cx = clamp(c.x, b.min.x, b.max.x), cy = clamp(c.y, b.min.y, b.max.y), cz = clamp(c.z, b.min.z, b.max.z);
+  const d = Math.hypot(c.x - cx, c.y - cy, c.z - cz);
+  return r - (d > 0 ? d : -0.01);
+}
+function updateBalls(p) { const q = p.mesh.quaternion; for (let k = 0; k < p.bl.length; k++) p.wo[k].copy(p.bl[k]).applyQuaternion(q); }
+const bc = new V3();
+function collideBox(p, b) {
+  // bounding-sphere reject
+  const qx = clamp(p.pos.x, b.min.x, b.max.x) - p.pos.x, qy = clamp(p.pos.y, b.min.y, b.max.y) - p.pos.y, qz = clamp(p.pos.z, b.min.z, b.max.z) - p.pos.z;
+  if (qx * qx + qy * qy + qz * qz >= p.r * p.r) return;
+  let pen = 0, nx = 0, ny = 1, nz = 0;
+  for (let k = 0; k < p.wo.length; k++) {
+    bc.copy(p.pos).add(p.wo[k]); const r = p.br[k];
+    const cx = clamp(bc.x, b.min.x, b.max.x), cy = clamp(bc.y, b.min.y, b.max.y), cz = clamp(bc.z, b.min.z, b.max.z);
+    const dx = bc.x - cx, dy = bc.y - cy, dz = bc.z - cz, d2 = dx * dx + dy * dy + dz * dz;
+    if (d2 >= r * r) continue;
+    let pk, ax = 0, ay = 0, az = 0;
+    if (d2 > 1e-12) { const d = Math.sqrt(d2); pk = r - d; ax = dx / d; ay = dy / d; az = dz / d; }
+    else { // ball centre inside the box: exit through the nearest face
+      const f = [[bc.x - b.min.x, -1, 0, 0], [b.max.x - bc.x, 1, 0, 0], [bc.y - b.min.y, 0, -1, 0], [b.max.y - bc.y, 0, 1, 0], [bc.z - b.min.z, 0, 0, -1], [b.max.z - bc.z, 0, 0, 1]];
+      let m = f[0]; for (const e of f) if (e[0] < m[0]) m = e; pk = r + m[0]; ax = m[1]; ay = m[2]; az = m[3];
+    }
+    if (pk > pen) { pen = pk; nx = ax; ny = ay; nz = az; }
+  }
+  if (pen <= 0) return;
+  p.pos.x += nx * pen; p.pos.y += ny * pen; p.pos.z += nz * pen;
+  const vn = p.vel.x * nx + p.vel.y * ny + p.vel.z * nz;
+  if (vn < 0) {
+    p.vel.x -= (1 + REST_E) * vn * nx; p.vel.y -= (1 + REST_E) * vn * ny; p.vel.z -= (1 + REST_E) * vn * nz;
+    if (vn < -1.2 && !initializing) { bump(Math.min(1, -vn / 6)); p.ang.set(rand(-4, 4), rand(-3, 3), rand(-4, 4)); }
+    const vn2 = p.vel.x * nx + p.vel.y * ny + p.vel.z * nz, f = 1 - p.fric;
+    p.vel.x = (p.vel.x - vn2 * nx) * f + vn2 * nx; p.vel.y = (p.vel.y - vn2 * ny) * f + vn2 * ny; p.vel.z = (p.vel.z - vn2 * nz) * f + vn2 * nz;
+  }
+  if (ny > 0.6) p.grounded = true;
+}
+const nV = new V3(), rv = new V3(), vt = new V3();
+const ca = new V3(), cb = new V3();
+// a letter whose centre is over the chute hole always drops (nothing can wedge above the hole)
+const inChute = p => p.pos.x < -0.4 && p.pos.z > 0.4 && p.pos.y < 1.6;
+function collidePair(a, b) {
+  if (inChute(a) || inChute(b)) return;
+  nV.subVectors(b.pos, a.pos); const rr = a.r + b.r;
+  if (nV.lengthSq() >= rr * rr) return;
+  const ia = a.held ? 0 : a.im, ib = b.held ? 0 : b.im, s = ia + ib; if (s === 0) return;
+  let pen = 0;
+  for (let i = 0; i < a.wo.length; i++) {
+    ca.copy(a.pos).add(a.wo[i]);
+    for (let j = 0; j < b.wo.length; j++) {
+      cb.copy(b.pos).add(b.wo[j]);
+      const dx = cb.x - ca.x, dy = cb.y - ca.y, dz = cb.z - ca.z, d2 = dx * dx + dy * dy + dz * dz, r = a.br[i] + b.br[j];
+      if (d2 >= r * r || d2 < 1e-12) continue;
+      const d = Math.sqrt(d2), pk = r - d;
+      if (pk > pen) { pen = pk; nV.set(dx / d, dy / d, dz / d); }
+    }
+  }
+  if (pen <= 0) return;
+  a.pos.addScaledVector(nV, -pen * ia / s); b.pos.addScaledVector(nV, pen * ib / s);
+  rv.subVectors(b.vel, a.vel); const rvn = rv.dot(nV);
+  if (rvn < 0) {
+    const j = -(1 + REST_E) * rvn / s;
+    a.vel.addScaledVector(nV, -j * ia); b.vel.addScaledVector(nV, j * ib);
+    vt.copy(rv).addScaledVector(nV, -rvn); const mu = (a.fric + b.fric) * 0.8;
+    a.vel.addScaledVector(vt, mu * ia / s); b.vel.addScaledVector(vt, -mu * ib / s);
+  }
+  if (nV.y > 0.5) b.grounded = true; else if (nV.y < -0.5) a.grounded = true;
+}
+// claw vs exact letter strokes: the claw always wins, the letter is pushed out of the way
+function collideClawLetter(p) {
+  for (const s of clawSamples) {
+    if (p.pos.distanceToSquared(s.pos) > (p.r + s.r) ** 2) continue;
+    const pen = s.r - letterDist(p, s.pos);
+    if (pen <= 0) continue;
+    if (LQ.n.y > 0.35 && (state === 'descend' || state === 'settle' || state === 'close' || state === 'grab')) {
+      if (s.finger < 0) continue; // hub resting on top: handled by lifting the claw instead
+      // fingertip landing on a letter edge: the letter slides sideways off the finger (no penetration)
+      let hx = LQ.n.x, hz = LQ.n.z, hl = Math.hypot(hx, hz);
+      if (hl > 0.25) { const m = Math.min(pen / hl, 0.03); p.pos.x -= hx / hl * m; p.pos.z -= hz / hl * m; }
+      else {
+        hx = p.pos.x - clawSamples[0].pos.x; hz = p.pos.z - clawSamples[0].pos.z; hl = Math.hypot(hx, hz) || 1;
+        const m = Math.min(0.03, pen * 3); p.pos.x += hx / hl * m; p.pos.z += hz / hl * m;
+      }
+      continue;
+    }
+    p.pos.addScaledVector(LQ.n, -pen);
+    const vn = tmpV.subVectors(p.vel, s.vel).dot(LQ.n);
+    if (vn > 0) p.vel.addScaledVector(LQ.n, -vn);
+  }
+}
+function stepPhysics(h) {
+  for (const p of prizes) {
+    if (p.held) continue;
+    p.vel.y -= G * h; p.vel.multiplyScalar(0.999);
+    const v2 = p.vel.lengthSq(); if (v2 > 36) p.vel.multiplyScalar(6 / Math.sqrt(v2)); // no launching letters
+    p.pos.addScaledVector(p.vel, h); p.grounded = false;
+  }
+  for (const p of prizes) updateBalls(p);
+  for (let it = 0; it < 3; it++) {
+    for (let i = 0; i < prizes.length; i++) for (let j = i + 1; j < prizes.length; j++) collidePair(prizes[i], prizes[j]);
+    for (const p of prizes) if (!p.held) for (const b of BOXES) collideBox(p, b);
+    for (const p of prizes) if (!p.held) collideClawLetter(p);
+  }
+  for (let i = prizes.length - 1; i >= 0; i--) {
+    const p = prizes[i];
+    if (p.grounded && p.vel.lengthSq() < 0.0025) p.vel.multiplyScalar(0.85);
+    const lost = Math.abs(p.pos.x) > 1.7 || Math.abs(p.pos.z) > 1.7 || p.pos.y > 4;
+    if ((p.pos.y < -0.45 || lost) && !p.held) {
+      prizes.splice(i, 1);
+      // only a letter that really drops through the chute counts as a prize
+      if (initializing || lost || !(p.pos.x < -0.35 && p.pos.z > 0.35)) { scene.remove(p.mesh); if (!initializing) requestRefill(); }
+      else win(p);
+    }
+  }
+}
+function syncPrizes() { for (const p of prizes) { p.mesh.position.copy(p.pos); if (!inChute(p)) (p.lastOut ||= new V3()).copy(p.pos); } }
+// orientation changes happen BEFORE the physics step, so any overlap they cause is resolved (the claw stays clear)
+function rotatePrizes(dt) {
+  for (const p of prizes) {
+    if (p.held) continue;
+    if (p.grounded) {
+      p.ang.multiplyScalar(0.5);
+      if (p.vel.lengthSq() < 0.3) p.mesh.quaternion.slerp(p.restQ, Math.min(1, dt * 1.6)); // settle into a resting pose
+    } else {
+      p.ang.multiplyScalar(0.99);
+      const w = p.ang.length();
+      if (w > 1e-3) { tmpQ.setFromAxisAngle(tmpV.copy(p.ang).divideScalar(w), w * dt); p.mesh.quaternion.premultiply(tmpQ); }
+    }
+  }
+}
+
+/* ================= Audio ================= */
+let actx = null, master, humGain, noiseBuf, muted = false;
+function initAudio() {
+  if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    master = actx.createGain(); master.gain.value = 0.55; master.connect(actx.destination);
+    const o = actx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 62;
+    const f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 320;
+    humGain = actx.createGain(); humGain.gain.value = 0; o.connect(f).connect(humGain).connect(master); o.start();
+    noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.3, actx.sampleRate);
+    const ch = noiseBuf.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+  } catch (e) { actx = null; }
+}
+function tone(freq, dur, type = 'sine', vol = 0.1, when = 0, freq2 = null) {
+  if (!actx || muted) return;
+  const t = actx.currentTime + when, o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (freq2) o.frequency.exponentialRampToValueAtTime(freq2, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.05);
+}
+function noise(dur, vol, freq = 1200) {
+  if (!actx || muted) return;
+  const s = actx.createBufferSource(); s.buffer = noiseBuf;
+  const f = actx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 1.2;
+  const g = actx.createGain(), t = actx.currentTime;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f).connect(g).connect(master); s.start(t); s.stop(t + dur);
+}
+let lastBump = 0;
+function bump(v) { const n = performance.now(); if (n - lastBump < 60) return; lastBump = n; noise(0.07, 0.05 + v * 0.12, 500 + Math.random() * 500); }
+const sfx = {
+  start() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.13, 'triangle', 0.12, i * 0.08)); },
+  drop() { tone(700, 0.6, 'triangle', 0.07, 0, 260); },
+  clamp() { noise(0.12, 0.35, 700); tone(110, 0.18, 'square', 0.09); tone(220, 0.08, 'square', 0.05, 0.05); },
+  up() { tone(260, 0.8, 'triangle', 0.05, 0, 620); },
+  fail() { tone(392, 0.18, 'sawtooth', 0.06); tone(311, 0.4, 'sawtooth', 0.06, 0.18); },
+  win() { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, 0.2, 'square', 0.06, i * 0.09)); tone(2093, 0.7, 'triangle', 0.08, 0.6); },
+  whoosh() { noise(1.2, 0.08, 400); },
+  turn() { tone(880, 0.1, 'triangle', 0.08); tone(1175, 0.18, 'triangle', 0.08, 0.1); },
+};
+
+/* ================= Players ================= */
+let players = [{ name: '플레이어 1', color: PCOLORS[0], letters: [] }], cur = 0;
+const avatarOf = (pl, i) => /^플레이어 \d$/.test(pl.name) ? String(i + 1) : esc([...pl.name][0]);
+function renderPlayers(newIdx = -1) {
+  const pl = players[cur];
+  $('#players').innerHTML = players.map((p, i) => `<div class="prow${i === cur ? ' cur' : ''}" style="--pc:${p.color}">
+    <div class="av">${avatarOf(p, i)}</div><div class="who"><span class="turn">${players.length > 1 ? '지금 차례' : '플레이어'}</span><span class="nm">${esc(p.name)}</span></div>
+    <div class="ct">${p.letters.length}</div><div class="pchips">${
+      p.letters.map((l, k) => `<span class="chip${i === newIdx && k === p.letters.length - 1 ? ' new' : ''}" style="background:${l.hex}">${l.c}</span>`).join('')}</div></div>`).join('');
+  ringMat.color.set(pl.color); ringMat.emissive.set(pl.color);
+}
+function showSplash() {
+  const pl = players[cur], sp = $('#splash');
+  sp.style.setProperty('--pc', pl.color);
+  sp.querySelector('.av').textContent = avatarOf(pl, cur).replace(/&amp;|&lt;|&gt;|&quot;|&#39;/g, '');
+  sp.querySelector('.nm').textContent = pl.name;
+  sp.querySelector('.tt').textContent = players.length > 1 ? '차례!' : '시작!';
+  sp.classList.remove('show'); void sp.offsetWidth; sp.classList.add('show');
+}
+function renderResults() {
+  const order = players.map((p, i) => ({ ...p, i })).sort((a, b) => b.letters.length - a.letters.length);
+  $('#resList').innerHTML = order.map((p, k) => `<div class="rcard" style="border-color:${p.color}55">
+    <div class="hd"><span class="rank">${k + 1}</span><i style="background:${p.color}"></i>${esc(p.name)}<span class="cnt">${p.letters.length}개</span></div>
+    <div class="pchips">${p.letters.length ? p.letters.map(l => `<span class="chip" style="background:${l.hex}">${l.c}</span>`).join('') : '<span style="opacity:.6;font-size:13px">아직 없어요</span>'}</div></div>`).join('');
+}
+
+/* ================= Game state ================= */
+const carriage = { x: HOME.x, z: HOME.z, vx: 0, vz: 0, pvx: 0, pvz: 0 };
+const sway = { x: 0, z: 0, wx: 0, wz: 0 };
+let cableLen = CABLE_REST;
+let wins = 0, timeLeft = 0, state = 'idle', st = 0, held = null, slipAt = Infinity, liftT = 0;
+let introOpen = true, flashT = 0, btnPressT = 0, binPrize = null, lastChance = 0, blocked = 0;
+// the claw stops where its CLOSED fingertips just clear the floor, so they wrap the bottom of a letter instead of jamming into the floor
+const MOVE_TIME = 20, SPEED = 0.9, DESC = 0.9, ASC = 0.75, MAX_CABLE = ROOT_Y - (0.847 * CLAW_S + 0.02);
+// grip: chance the letter stays in the claw. t2 = 2+ fingers on it, t1b = 1 finger under it, t1 = 1 finger, rest = lying on closed fingers
+// assist = how far (horizontally) the claw auto-centres onto the nearest letter while dropping
+const DIFF = {
+  easy:   { label: '쉬움',   reach: 0.5,  tol: 0.03,  pinch: -0.05, offAxis: 0.35, cradleR: 0.38, loosen: 0,    assist: 0.34 },
+  normal: { label: '보통',   reach: 0.42, tol: 0.015, pinch: -0.25, offAxis: 0.25, cradleR: 0.3,  loosen: 0,    assist: 0.24 },
+  hard:   { label: '어려움', reach: 0.32, tol: 0.02,  pinch: -0.45, offAxis: 0.18, cradleR: 0.22, loosen: 0.06, assist: 0 },
+};
+const DIFF_ORDER = ['easy', 'normal', 'hard'];
+let diffKey = 'normal', loosened = false, graded = true, wrapping = false;
+// pull the caught letter to the middle of the claw and close every finger onto it (stopping exactly at contact)
+function wrapFingers(p) {
+  const pen = f => { for (const s of f.samples) { if (p.pos.distanceToSquared(s.pos) > (p.r + s.r) ** 2) continue; if (letterDist(p, s.pos) - s.r < 0.002) return true; } return false; };
+  for (const f of fingers) {
+    let a = f.angle;
+    setFinger(f, a);
+    while (pen(f) && a < OPEN) { a = Math.min(OPEN, a + 0.03); setFinger(f, a); }   // letter moved into the finger: ease off
+    let free = a, hit = null;
+    while (a > CLOSED) { a = Math.max(CLOSED, a - 0.02); setFinger(f, a); if (pen(f)) { hit = a; break; } free = a; } // close until first touch
+    if (hit !== null) { let lo = hit, hi = free; for (let k = 0; k < 7; k++) { const mid = (lo + hi) / 2; setFinger(f, mid); if (pen(f)) lo = mid; else hi = mid; } free = hi; }
+    setFinger(f, free); f.target = free;
+  }
+}
+const D = () => DIFF[diffKey];
+const input = { jx: 0, jy: 0 };
+const mv = new V3();
+
+function setState(s) { state = s; st = 0; $('#btnDrop').classList.toggle('busy', !(s === 'move' || s === 'idle')); }
+let msgTimer = 0;
+function showMsg(t, hold = 0) { const m = $('#msg'); m.textContent = t; m.style.opacity = 1; msgTimer = hold; }
+function updateHUD() { $('#vTime').textContent = state === 'move' ? Math.ceil(timeLeft) : '--'; }
+function startGame() { timeLeft = MOVE_TIME; setState('move'); sfx.start(); showMsg(`${players[cur].name}, 위치를 맞추고 [잡기]!`); updateHUD(); }
+function pressDrop() {
+  initAudio(); btnPressT = 0.18; const b = $('#btnDrop'); b.classList.remove('press'); void b.offsetWidth; b.classList.add('press');
+  setTimeout(() => b.classList.remove('press'), 450);
+  if (introOpen) return;
+  if (state === 'idle') { startGame(); return; }
+  if (state === 'move') beginDrop();
+}
+let assistTarget = null;
+function beginDrop() {
+  lastChance = 0; blocked = 0; assistTarget = null;
+  // aim assist: gently centre the claw over the closest letter right below it
+  const a = D().assist;
+  if (a > 0) {
+    // centre on the letter the claw will actually land on: the highest one close below it
+    let best = null, bs = -Infinity;
+    for (const p of prizes) { const d = Math.hypot(p.pos.x - carriage.x, p.pos.z - carriage.z); if (d < a && p.pos.y - d * 0.8 > bs) { bs = p.pos.y - d * 0.8; best = p; } }
+    if (best) assistTarget = { x: clamp(best.pos.x, -CB, CB), z: clamp(best.pos.z, -CB, CB) };
+  }
+  setState('descend'); fingers.forEach(f => f.target = OPEN); sfx.drop(); showMsg('내려가는 중...'); updateHUD(); }
+function startClose() { setState('close'); fingers.forEach(f => { f.stopped = false; f.contact = null; }); sfx.clamp(); }
+
+const hp = new V3(), headQ = new THREE.Quaternion();
+function tipsMinY() { let m = 9; for (const f of fingers) { const s = f.samples[f.samples.length - 1]; s.obj.getWorldPosition(tmpV); m = Math.min(m, tmpV.y - s.r); } return m; }
+function refreshSamples() { for (const s of clawSamples) s.obj.getWorldPosition(s.pos); }
+// contact test of one claw sample (tolerance tol) against letters + floor/barriers
+const hitInfo = { p: null, y: 0, top: false };
+function sampleHit(s, tol) {
+  for (const p of prizes) {
+    if (p.held || p.pos.distanceToSquared(s.pos) > (p.r + s.r) ** 2) continue;
+    if (s.r - letterDist(p, s.pos) > -tol) { hitInfo.p = p; hitInfo.y = s.pos.y; hitInfo.top = LQ.n.y > 0.35; return true; }
+  }
+  for (const b of CLAW_STATIC) if (sphereBoxPen(s.pos, s.r, b) > -tol) { hitInfo.p = null; hitInfo.y = s.pos.y; hitInfo.top = true; return true; }
+  return false;
+}
+function descendHit() {
+  if (tipsMinY() < 0.005) return true;
+  for (const s of clawSamples) if (sampleHit(s, 0.004) && (s.finger < 0 || (hitInfo.p === null && hitInfo.top))) return true;
+  return false;
+}
+function maxClawPen(topOnly = false) {
+  let m = 0;
+  for (const s of clawSamples) for (const p of prizes) {
+    if (p.held || p.pos.distanceToSquared(s.pos) > (p.r + s.r) ** 2) continue;
+    const pen = s.r - letterDist(p, s.pos); if (topOnly && LQ.n.y <= 0.35) continue; if (pen > m) m = pen;
+  }
+  return m;
+}
+function setFinger(f, a) { f.angle = a; f.hinge.rotation.z = a; f.hinge.updateMatrixWorld(true); for (const s of f.samples) s.obj.getWorldPosition(s.pos); }
+function fingerHit(f) { for (const s of f.samples) if (sampleHit(s, 0.003)) return true; return false; }
+/* Motor-driven closing: fingers keep closing and SHOVE letters out of the way (physics does the pushing).
+   A finger stops only when a letter can no longer move away (it is squeezed against another finger,
+   the pile, a wall or the floor) -> then it backs off to the exact touching angle and holds there. */
+function fingerStaticHit(f) { for (const s of f.samples) for (const b of CLAW_STATIC) if (sphereBoxPen(s.pos, s.r, b) > 0) return true; return false; }
+function fingerPen(f) {
+  let m = 0, who = null;
+  for (const s of f.samples) for (const p of prizes) {
+    if (p.held || p.pos.distanceToSquared(s.pos) > (p.r + s.r) ** 2) continue;
+    const pen = s.r - letterDist(p, s.pos); if (pen > m) { m = pen; who = p; }
+  }
+  return [m, who];
+}
+function closeFingers(dt) {
+  for (const f of fingers) {
+    if (f.stopped) continue;
+    f.prevA = f.angle;
+    const na = Math.max(CLOSED, f.angle - 1.7 * dt);
+    setFinger(f, na);
+    if (fingerStaticHit(f)) { setFinger(f, f.prevA); f.stopped = true; }
+    else if (na <= CLOSED) f.stopped = true;
+    f.target = f.angle;
+  }
+  return fingers.every(f => f.stopped);
+}
+// after physics pushed the letters: a finger still inside a letter means that letter is blocked -> finger is stalled there
+function settleFingers() {
+  // the claw motor is strong enough to shove loose letters in the pile aside, but not through walls/floor
+  for (const p of prizes) updateBalls(p);
+  for (const p of prizes) if (!p.held) for (const b of BOXES) collideBox(p, b);
+  for (const f of fingers) {
+    const [pen, who] = fingerPen(f);
+    if (pen <= 0.006) continue;
+    let lo = f.angle, hi = Math.max(f.prevA ?? f.angle, f.angle) + 0.06; // lo = inside, hi = free
+    setFinger(f, hi); while (fingerPen(f)[0] > 0.002 && hi < OPEN + 0.3) { lo = hi; hi += 0.05; setFinger(f, hi); }
+    for (let k = 0; k < 8; k++) { const mid = (lo + hi) / 2; setFinger(f, mid); if (fingerPen(f)[0] > 0.002) lo = mid; else hi = mid; }
+    setFinger(f, hi); f.target = hi; f.stopped = true; f.contact = who;
+  }
+}
+/* ---- physical grip test (no dice rolls) ----
+   A letter is lifted only if, with the fingers where they actually stopped:
+   PINCH : two fingers press it from roughly opposite sides AND its centre lies between those two contacts, or
+   CRADLE: at least two fingers are underneath it (holding it up) and it sits over the claw, or
+   CAGE  : all three fingers touch it around the centre.
+   Otherwise the claw comes up empty, exactly like a real machine. */
+function fingerContacts(p, tol) {
+  const res = [];
+  for (const f of fingers) {
+    let best = null;
+    for (const s of f.samples) {
+      if (p.pos.distanceToSquared(s.pos) > (p.r + s.r + tol) ** 2) continue;
+      const gap = letterDist(p, s.pos) - s.r;
+      if (gap < tol && (!best || gap < best.gap)) best = { gap, n: LQ.n.clone(), pt: s.pos.clone().addScaledVector(LQ.n, -s.r) };
+    }
+    if (best) res.push(best);
+  }
+  return res;
+}
+function gripType(p) {
+  const d = D(), C = fingerContacts(p, d.tol);
+  head.getWorldPosition(hp);
+  const dh = Math.hypot(p.pos.x - hp.x, p.pos.z - hp.z);
+  for (let i = 0; i < C.length; i++) for (let j = i + 1; j < C.length; j++) {
+    const a = C[i], b = C[j], la = Math.hypot(a.n.x, a.n.z), lb = Math.hypot(b.n.x, b.n.z);
+    if (la < 0.3 || lb < 0.3) continue;                       // side contacts only
+    const dot = (a.n.x * b.n.x + a.n.z * b.n.z) / (la * lb);
+    if (dot > d.pinch) continue;                              // must press from opposite-ish sides
+    const abx = b.pt.x - a.pt.x, abz = b.pt.z - a.pt.z, L2 = abx * abx + abz * abz; if (L2 < 1e-4) continue;
+    const t = ((p.pos.x - a.pt.x) * abx + (p.pos.z - a.pt.z) * abz) / L2;
+    const off = Math.abs((p.pos.x - a.pt.x) * abz - (p.pos.z - a.pt.z) * abx) / Math.sqrt(L2);
+    if (t > -0.15 && t < 1.15 && off < d.offAxis) return { type: 'pinch', n: C.length, dh }; // squeezed between two fingers (friction holds it)
+  }
+  const under = C.filter(c => c.n.y < -0.35);                 // finger is below the letter, holding it up
+  // resting on a finger with its centre of mass right over the support, and steadied by another finger
+  const balanced = under.some(c => Math.hypot(c.pt.x - p.pos.x, c.pt.z - p.pos.z) < d.cradleR);
+  if (under.length >= 2 || (under.length >= 1 && balanced && C.length >= 2)) if (dh < d.cradleR + 0.15) return { type: 'cradle', n: C.length, dh };
+  if (C.length >= 3) return { type: 'cage', n: C.length, dh };
+  return { type: null, n: C.length, dh };
+}
+// a letter can only be caught if it really ended up INSIDE the closed claw (between the fingers, below the hub, above the fingertips)
+function evaluateGrab() {
+  head.getWorldPosition(hp);
+  const d = D(), tipY = tipsMinY();
+  let best = null, bestScore = -Infinity, bestG = null;
+  for (const p of prizes) {
+    if (p.pos.y > hp.y - 0.05 || p.pos.y < tipY - 0.02) continue;
+    const dh = Math.hypot(p.pos.x - hp.x, p.pos.z - hp.z);
+    if (dh > d.reach) continue;
+    const g = gripType(p);
+    if (!g.type && g.n === 0 && dh > d.reach * 0.6) continue; // untouched and off to the side: not in the claw
+    const score = (g.type ? 2 : 0) + g.n * 0.3 - dh * 2 + p.pos.y * 0.3;
+    if (score > bestScore) { bestScore = score; best = p; bestG = g; }
+  }
+  dbg.info = bestG ? { type: bestG.type, n: bestG.n, dh: +bestG.dh.toFixed(2) } : null;
+  if (!best) { showMsg('제대로 못 잡았어요... 가운데를 노려 보세요'); return; }
+  lastChance = 1;
+  held = best; best.held = true; best.vel.set(0, 0, 0); best.ang.set(0, 0, 0);
+  head.updateMatrixWorld(true); head.getWorldQuaternion(headQ);
+  best.offset = head.worldToLocal(best.pos.clone());
+  best.localQ = headQ.clone().invert().multiply(best.mesh.quaternion);
+  slipAt = Infinity; liftT = 0; loosened = false; wrapping = true;
+  showMsg(`'${best.c}' 꽉 잡았다!`);
+  const hex = '#' + best.color.getHexString();
+  $('#carry .big').textContent = best.c; $('#carry .big').style.background = hex;
+  $('#carry .nm').textContent = best.name; $('#carry').classList.add('show');
+}
+function releaseHeld(slip) {
+  if (!held) return;
+  held.wasHeld = true; held.held = false; held = null; $('#carry').classList.remove('show');
+  if (slip) fingers.forEach(f => f.target = Math.min(OPEN, f.angle + 0.4));
+}
+
+/* ================= Win / effects ================= */
+const CONF_N = 180;
+const confetti = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.07, 0.035), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), CONF_N);
+confetti.frustumCulled = false; scene.add(confetti);
+const confData = [];
+const confCols = [0xff3dd6, 0x22e6ff, 0xffd23d, 0x7dff8a, 0xffffff, 0xff7a3d].map(c => new THREE.Color(c));
+const dummy = new THREE.Object3D();
+for (let i = 0; i < CONF_N; i++) {
+  confData.push({ p: new V3(0, -99, 0), v: new V3(), r: new V3(), w: new V3(), life: 0 });
+  confetti.setColorAt(i, pick(confCols));
+  dummy.position.set(0, -99, 0); dummy.updateMatrix(); confetti.setMatrixAt(i, dummy.matrix);
+}
+function burstConfetti() {
+  for (const c of confData) {
+    c.p.set(rand(-1.4, 1.4), rand(2.2, 2.8), rand(-1.2, 1.4)); c.v.set(rand(-1.5, 1.5), rand(0.5, 2.5), rand(-1.5, 1.5));
+    c.r.set(rand(0, 6), rand(0, 6), rand(0, 6)); c.w.set(rand(-9, 9), rand(-9, 9), rand(-9, 9)); c.life = rand(2.2, 3.4);
+  }
+}
+function updateConfetti(dt) {
+  let any = false;
+  confData.forEach((c, i) => {
+    if (c.life <= 0) return; any = true;
+    c.life -= dt; c.v.y -= 3 * dt; c.v.multiplyScalar(0.985); c.p.addScaledVector(c.v, dt); c.r.addScaledVector(c.w, dt);
+    c.p.x = clamp(c.p.x, -1.48, 1.48); c.p.z = clamp(c.p.z, -1.48, 1.48);
+    if (c.p.y < 0.02) { c.p.y = 0.02; c.v.set(0, 0, 0); c.w.set(0, 0, 0); }
+    dummy.position.copy(c.life > 0 ? c.p : tmpV.set(0, -99, 0)); dummy.rotation.set(c.r.x, c.r.y, c.r.z); dummy.updateMatrix();
+    confetti.setMatrixAt(i, dummy.matrix);
+  });
+  if (any) confetti.instanceMatrix.needsUpdate = true;
+}
+let popupTimer = 0;
+// reset button: clear the pile and drop a fresh, balanced set (every consonant x3) in three waves
+let shuffling = false;
+function spawnAwayFromClaw(n, y0, dy) {
+  for (let i = 0; i < n; i++) {
+    let x = 0, z = 0;
+    for (let t = 0; t < 30; t++) { [x, z] = randomSpot(); if (Math.hypot(x - carriage.x, z - carriage.z) > 0.7) break; }
+    addPrize(new V3(x, y0 + i * dy, z));
+  }
+}
+function resetLetters() {
+  if (introOpen) return;
+  if (shuffling || !(state === 'idle' || state === 'move')) { showMsg('집게가 돌아온 뒤에 섞을 수 있어요', 1.5); return; }
+  shuffling = true; initAudio(); sfx.whoosh();
+  for (let i = prizes.length - 1; i >= 0; i--) { const p = prizes[i]; if (p.held) continue; scene.remove(p.mesh); prizes.splice(i, 1); }
+  letterQueue = [];
+  showMsg('글자를 다시 섞는 중...', 2.4);
+  [0, 500, 1000].forEach((ms, k) => setTimeout(() => {
+    spawnAwayFromClaw(14, 1.25 + k * 0.12, 0.08); bump(0.6);
+    if (k === 2) { shuffling = false; setTimeout(() => showMsg(`자음 ${prizes.length}개를 새로 배치했어요!`, 1.6), 900); }
+  }, ms));
+}
+// keep the machine full: top back up to 42 letters whenever it drops below 38
+function requestRefill() {
+  if (shuffling) return;
+  if (prizes.length >= 38 || refillPending) return;
+  refillPending = true;
+  setTimeout(() => { refillPending = false; const n = Math.min(10, FULL - prizes.length); if (n > 0) { spawn(n, 1.7, 0.07); showMsg(`자음 ${n}개가 새로 채워졌어요!`, 1.5); } }, 2600);
+}
+function win(p) {
+  (dbg.wins ||= []).push({ c: p.c, held: !!p.wasHeld, last: p.lastOut ? [p.lastOut.x, p.lastOut.y, p.lastOut.z].map(v => +v.toFixed(2)) : null });
+  wins++; flashT = 3;
+  if (binPrize) scene.remove(binPrize.mesh);
+  binPrize = p; p.mesh.position.set(-1.05, -1.62, 1.79); p.mesh.scale.setScalar(0.68);
+  p.mesh.quaternion.identity(); binLight.intensity = 0.7;
+  const hex = '#' + p.color.getHexString(), pl = players[cur];
+  pl.letters.push({ c: p.c, hex });
+  const pop = $('#popup');
+  const sw = pop.querySelector('.sw'); sw.style.background = hex; sw.textContent = p.c;
+  pop.querySelector('.n').innerHTML = `<span style="color:${pl.color}">${esc(pl.name)}</span> · ${p.c} (${p.name}) 획득!`;
+  pop.querySelector('.s').textContent = `${pl.name}의 자음 ${pl.letters.length}개`;
+  pop.classList.add('show'); popupTimer = 2.6;
+  renderPlayers(cur);
+  showMsg(`축하해요! '${p.c}' 획득!`, 2.5);
+  burstConfetti(); sfx.win();
+  requestRefill();
+}
+
+/* ================= Camera ================= */
+const VIEWS = ['내부캠', '정면', '측면'];
+let viewMode = 0, tween = null, introPhase = 'orbit', introT = 0;
+const ORBIT_T = 7.5;
+const camPosS = new V3(), camLook = new V3(HOME.x, 1.6, HOME.z);
+const inCam = { yaw: 0, pitch: 0.5, zoom: 1 };
+function fitDist() {
+  const vf = THREE.MathUtils.degToRad(40) / 2, hf = Math.atan(Math.tan(vf) * camera.aspect);
+  return Math.max(3.55 / Math.tan(vf), 2.3 / Math.tan(hf)) + 1.7;
+}
+function orbitPose(i) {
+  const d = fitDist();
+  if (i === 1) return { p: new V3(0, 2.3, d), t: new V3(0, 0.85, 0) };
+  return { p: new V3(d * 0.97, 2.0, 0.6), t: new V3(0, 0.85, 0) };
+}
+// inside cam: follows the claw and can be orbited by dragging; clamped so the view is never blocked
+function followPose(out) {
+  head.getWorldPosition(hp);
+  out.t.set(hp.x, Math.max(0.15, hp.y - 0.62 * CLAW_S), hp.z);
+  const back = 2.15 * clamp(0.8 / camera.aspect, 1, 1.8) * inCam.zoom;
+  let x = out.t.x + Math.sin(inCam.yaw) * back, z = out.t.z + Math.cos(inCam.yaw) * back;
+  let y = out.t.y + Math.tan(inCam.pitch) * back;
+  x = clamp(x, -1.45, 1.45); z = clamp(z, -1.45, 3.8);
+  y = clamp(y, 0.45, z < 1.56 ? 2.86 : 3.7);
+  out.p.set(x, y, z);
+  return out;
+}
+const fp = { p: new V3(), t: new V3() };
+function goView(i) {
+  const prev = viewMode;
+  const t0 = tween ? tween.tc.clone() : (prev === 0 ? camLook.clone() : controls.target.clone());
+  viewMode = i; $('#btnView').textContent = '시점: ' + VIEWS[i];
+  controls.enabled = false;
+  tween = { p0: camera.position.clone(), t0, fov0: camera.fov, k: 0, dur: 1.2, tc: t0.clone() };
+  if (i === 0) { inCam.yaw = 0; inCam.pitch = 0.5; inCam.zoom = 1; tween.fov1 = 60; tween.follow = true; }
+  else { const v = orbitPose(i); tween.p1 = v.p; tween.t1 = v.t; tween.fov1 = 40; tween.follow = false; }
+}
+function updateCamera(dt) {
+  if (introPhase === 'orbit') {
+    introT += dt; const k = Math.min(1, introT / ORBIT_T);
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    const a = e * Math.PI * 2, Rr = fitDist() * (1.12 - 0.12 * e);
+    camera.position.set(Math.sin(a) * Rr, 3.7 - 1.4 * e, Math.cos(a) * Rr);
+    controls.target.set(0, 0.85, 0); camera.lookAt(controls.target);
+    if (k >= 1) endOrbit();
+    return;
+  }
+  if (introPhase === 'card') { camera.lookAt(controls.target); return; }
+  if (tween) {
+    tween.k = Math.min(1, tween.k + dt / tween.dur);
+    const e = tween.k < 0.5 ? 4 * tween.k ** 3 : 1 - Math.pow(-2 * tween.k + 2, 3) / 2;
+    let p1 = tween.p1, t1 = tween.t1;
+    if (tween.follow) { followPose(fp); p1 = fp.p; t1 = fp.t; }
+    camera.position.lerpVectors(tween.p0, p1, e); tween.tc.lerpVectors(tween.t0, t1, e); camera.lookAt(tween.tc);
+    camera.fov = tween.fov0 + (tween.fov1 - tween.fov0) * e; camera.updateProjectionMatrix();
+    if (tween.k >= 1) {
+      if (tween.follow) { camPosS.copy(p1); camLook.copy(t1); }
+      else { controls.target.copy(t1); controls.enabled = true; controls.update(); }
+      tween = null;
+    }
+    return;
+  }
+  if (viewMode === 0) {
+    followPose(fp);
+    camPosS.lerp(fp.p, 1 - Math.exp(-dt * (dragging ? 12 : 3.5)));
+    camLook.lerp(fp.t, 1 - Math.exp(-dt * 6));
+    camera.position.copy(camPosS); camera.lookAt(camLook);
+  } else controls.update();
+}
+function endOrbit() {
+  if (introPhase !== 'orbit') return;
+  introPhase = 'card';
+  const v = orbitPose(1); camera.position.copy(v.p); controls.target.copy(v.t); camera.lookAt(v.t);
+  $('#introTitle').style.opacity = 0; $('#btnSkip').style.display = 'none';
+  $('#intro').classList.add('show');
+}
+let pcount = 1;
+function buildPlayerPicker() {
+  const pc = $('#pcount'); pc.innerHTML = '';
+  for (let n = 1; n <= 6; n++) {
+    const b = document.createElement('button'); b.textContent = n + '인'; if (n === pcount) b.classList.add('on');
+    b.onclick = () => { pcount = n; buildPlayerPicker(); }; pc.appendChild(b);
+  }
+  const old = [...$('#pnames').querySelectorAll('input')].map(i => i.value);
+  $('#pnames').innerHTML = Array.from({ length: pcount }, (_, i) =>
+    `<label><i style="background:${PCOLORS[i]}"></i><input maxlength="10" placeholder="플레이어 ${i + 1}" value="${esc(old[i] || '')}"></label>`).join('');
+}
+function startFromCard() {
+  if (introPhase !== 'card') return;
+  const names = [...$('#pnames').querySelectorAll('input')].map((inp, i) => inp.value.trim() || `플레이어 ${i + 1}`);
+  players = names.map((name, i) => ({ name, color: PCOLORS[i], letters: [] })); cur = 0;
+  renderPlayers();
+  initAudio(); sfx.whoosh();
+  introPhase = 'done'; introOpen = false;
+  $('#intro').classList.remove('show'); document.body.classList.remove('in-intro');
+  camLook.copy(controls.target);
+  goView(0); tween.dur = 1.8;
+  setState('idle'); showMsg(`${players[0].name} 차례! 조이스틱을 움직이면 시작`);
+  setTimeout(showSplash, 900);
+}
+
+/* ================= Input ================= */
+const keys = {};
+addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') { if (e.code === 'Enter') startFromCard(); return; }
+  if (introPhase === 'orbit' && (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape')) { endOrbit(); e.preventDefault(); return; }
+  if (introPhase === 'card' && (e.code === 'Enter' || e.code === 'Space')) { startFromCard(); e.preventDefault(); return; }
+  keys[e.code] = true;
+  if (e.code === 'Space' || e.code === 'Enter') { if (!e.repeat) pressDrop(); e.preventDefault(); }
+  if (e.code === 'KeyV' && !e.repeat && !introOpen) goView((viewMode + 1) % 3);
+  if (e.code === 'KeyR' && !e.repeat) resetLetters();
+  if (e.code.startsWith('Arrow')) e.preventDefault();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+const joy = $('#joy'), knob = $('#knob'); let joyId = null;
+function joyMove(e) {
+  const r = joy.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, Rr = r.width * 0.33;
+  let dx = e.clientX - cx, dy = e.clientY - cy; const l = Math.hypot(dx, dy);
+  if (l > Rr) { dx *= Rr / l; dy *= Rr / l; }
+  knob.style.transform = `translate(${dx}px,${dy}px)`;
+  input.jx = dx / Rr; input.jy = -dy / Rr;
+}
+joy.addEventListener('pointerdown', e => { initAudio(); joyId = e.pointerId; joy.setPointerCapture(e.pointerId); joy.classList.add('active'); joyMove(e); });
+joy.addEventListener('pointermove', e => { if (e.pointerId === joyId) joyMove(e); });
+const joyEnd = e => { if (e.pointerId !== joyId) return; joyId = null; input.jx = input.jy = 0; knob.style.transform = ''; joy.classList.remove('active'); };
+joy.addEventListener('pointerup', joyEnd); joy.addEventListener('pointercancel', joyEnd);
+$('#btnDrop').addEventListener('pointerdown', e => { e.preventDefault(); pressDrop(); });
+$('#btnView').addEventListener('click', () => goView((viewMode + 1) % 3));
+$('#btnAim').addEventListener('click', () => { aimOn = !aimOn; $('#btnAim').textContent = '조준선 ' + (aimOn ? 'ON' : 'OFF'); });
+$('#btnDiff').addEventListener('click', () => { diffKey = DIFF_ORDER[(DIFF_ORDER.indexOf(diffKey) + 1) % 3]; $('#btnDiff').textContent = '난이도: ' + D().label; showMsg('난이도: ' + D().label, 1.2); });
+$('#btnSound').addEventListener('click', () => { initAudio(); muted = !muted; $('#btnSound').textContent = '소리 ' + (muted ? 'OFF' : 'ON'); });
+$('#btnShuffle').addEventListener('click', resetLetters);
+$('#btnResults').addEventListener('click', () => { renderResults(); $('#results').classList.add('show'); });
+$('#btnClose').addEventListener('click', () => $('#results').classList.remove('show'));
+$('#btnNew').addEventListener('click', () => location.reload());
+$('#btnSkip').addEventListener('click', endOrbit);
+$('#btnStart').addEventListener('click', startFromCard);
+// canvas drag: orbit the inside cam (other views use OrbitControls); tap the 3D button to grab
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let downXY = null, dragging = false, lastXY = null;
+const cv = renderer.domElement;
+cv.addEventListener('pointerdown', e => { downXY = [e.clientX, e.clientY]; lastXY = [e.clientX, e.clientY]; if (viewMode === 0 && introPhase === 'done') { dragging = true; cv.setPointerCapture(e.pointerId); } });
+cv.addEventListener('pointermove', e => {
+  if (!dragging || !lastXY) return;
+  const dx = e.clientX - lastXY[0], dy = e.clientY - lastXY[1]; lastXY = [e.clientX, e.clientY];
+  inCam.yaw -= dx * 0.006; inCam.pitch = clamp(inCam.pitch + dy * 0.004, 0.12, 1.35);
+});
+cv.addEventListener('pointerup', e => {
+  dragging = false;
+  if (!downXY || Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]) > 6) return;
+  ndc.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(ndc, camera);
+  if (ray.intersectObjects([btnCap, grabLabel], false).length) pressDrop();
+});
+cv.addEventListener('wheel', e => { if (viewMode === 0) { inCam.zoom = clamp(inCam.zoom * (1 + e.deltaY * 0.001), 0.55, 1.7); e.preventDefault(); } }, { passive: false });
+cv.addEventListener('dblclick', () => { if (viewMode === 0) { inCam.yaw = 0; inCam.pitch = 0.5; inCam.zoom = 1; } });
+
+/* ================= Main update ================= */
+function readInput() {
+  let ix = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0);
+  let iy = (keys.ArrowUp || keys.KeyW ? 1 : 0) - (keys.ArrowDown || keys.KeyS ? 1 : 0);
+  if (Math.abs(input.jx) + Math.abs(input.jy) > 0.05) { ix = input.jx; iy = input.jy; }
+  const l = Math.hypot(ix, iy); if (l > 1) { ix /= l; iy /= l; }
+  const tgt = viewMode === 0 ? camLook : controls.target;
+  let fx = tgt.x - camera.position.x, fz = tgt.z - camera.position.z;
+  const fl = Math.hypot(fx, fz) || 1; fx /= fl; fz /= fl;
+  mv.set(-fz * ix + fx * iy, 0, fx * ix + fz * iy);
+  for (const [cls, on] of [['n', iy > 0.3], ['s', iy < -0.3], ['e', ix > 0.3], ['w', ix < -0.3]]) joy.querySelector('.' + cls).classList.toggle('on', on);
+  return l > 0.05;
+}
+function constrainSwayAxis(pos, L, ang, wKey) {
+  const sMax = Math.asin(clamp((CB - pos) / L, -1, 1)), sMin = Math.asin(clamp((-CB - pos) / L, -1, 1));
+  if (sway[ang] > sMax) { sway[ang] = sMax; if (sway[wKey] > 0) sway[wKey] *= -0.3; }
+  if (sway[ang] < sMin) { sway[ang] = sMin; if (sway[wKey] < 0) sway[wKey] *= -0.3; }
+}
+const sampleOut = s => Math.abs(s.pos.x) + s.r > 1.5 || Math.abs(s.pos.z) + s.r > 1.5;
+function updateRig(dt, noSway = false) {
+  dt = Math.max(dt, 1e-3);
+  clawRoot.position.set(carriage.x, ROOT_Y, carriage.z);
+  carriageMesh.position.set(carriage.x, 2.86, carriage.z); bridge.position.z = carriage.z;
+  const L = cableLen + 0.35;
+  const ax = noSway ? 0 : (carriage.vx - carriage.pvx) / dt, az = noSway ? 0 : (carriage.vz - carriage.pvz) / dt;
+  if (!noSway) sway.wx += (-(G / L) * sway.x - 1.8 * sway.wx - ax / L) * dt; sway.x = clamp(sway.x + sway.wx * dt, -0.28, 0.28);
+  if (!noSway) sway.wz += (-(G / L) * sway.z - 1.8 * sway.wz - az / L) * dt; sway.z = clamp(sway.z + sway.wz * dt, -0.28, 0.28);
+  constrainSwayAxis(carriage.x, L, 'x', 'wx'); constrainSwayAxis(carriage.z, L, 'z', 'wz');
+  swing.rotation.z = sway.x; swing.rotation.x = -sway.z;
+  cable.scale.y = cableLen; cable.position.y = -cableLen / 2; head.position.y = -cableLen;
+  const prevAng = fingers.map(f => f.angle);
+  if (state !== 'close') for (const f of fingers) { f.angle += clamp(f.target - f.angle, -2.4 * dt, 2.4 * dt); f.hinge.rotation.z = f.angle; }
+  clawRoot.updateMatrixWorld(true); refreshSamples();
+  // opening fingers never push into a letter: stop opening at first touch
+  if (state !== 'close') fingers.forEach((f, i) => { if (f.angle > prevAng[i] && fingerHit(f)) setFinger(f, prevAng[i]); });
+  // glass walls: fingers near a wall open less; never poke through
+  if (!held) for (const f of fingers) { // (a finger wrapped round a caught letter must not be squeezed into it)
+    let g = 0;
+    while (g++ < 16 && f.angle > CLOSED && f.samples.some(sampleOut)) setFinger(f, Math.max(CLOSED, f.angle - 0.05));
+  }
+  let g2 = 0;
+  while (g2++ < 8 && clawSamples.some(sampleOut)) {
+    sway.x *= 0.6; sway.z *= 0.6; sway.wx *= 0.5; sway.wz *= 0.5;
+    swing.rotation.z = sway.x; swing.rotation.x = -sway.z; clawRoot.updateMatrixWorld(true); refreshSamples();
+  }
+}
+function updateClawVel(dt) {
+  for (const s of clawSamples) { s.vel.subVectors(s.pos, s.prev).divideScalar(Math.max(dt, 1e-3)); s.prev.copy(s.pos); }
+}
+function nextTurn() {
+  if (players.length > 1) { cur = (cur + 1) % players.length; renderPlayers(-1, true); showSplash(); sfx.turn(); }
+  showMsg(players.length > 1 ? `${players[cur].name} 차례! 조이스틱을 움직이세요` : '한 번 더! 조이스틱을 움직이세요');
+}
+function update(dt) {
+  st += dt;
+  const moving = readInput();
+  let tvx = 0, tvz = 0;
+  switch (state) {
+    case 'idle': if (moving && !introOpen && !tween) startGame(); break;
+    case 'move':
+      timeLeft -= dt; tvx = mv.x * SPEED; tvz = mv.z * SPEED;
+      if (timeLeft <= 0) { timeLeft = 0; beginDrop(); }
+      break;
+    case 'descend':
+      cableLen = Math.min(MAX_CABLE, cableLen + DESC * dt);
+      if (assistTarget) { const dx = assistTarget.x - carriage.x, dz = assistTarget.z - carriage.z; tvx = dx * 4; tvz = dz * 4; }
+      break;
+    case 'settle': sway.wx *= 0.8; sway.wz *= 0.8; if (st > 0.2) startClose(); break;
+    case 'close': if (closeFingers(dt) && st > 0.1) { setState('grab'); graded = false; } break;
+    case 'grab':
+      if (!graded && st > 0.1) { graded = true; evaluateGrab(); } // judge the grip once everything has settled
+      if (st > 0.45) { setState('ascend'); sfx.up(); }
+      break;
+    case 'ascend': cableLen -= ASC * dt; if (cableLen <= CABLE_REST) { cableLen = CABLE_REST; setState('ret'); } break;
+    case 'ret': {
+      const dx = HOME.x - carriage.x, dz = HOME.z - carriage.z, d = Math.hypot(dx, dz);
+      if (d < 0.015 && Math.hypot(carriage.vx, carriage.vz) < 0.08) { carriage.x = HOME.x; carriage.z = HOME.z; carriage.vx = carriage.vz = 0; setState('release'); }
+      else { const sp = Math.min(SPEED, d * 3 + 0.06); tvx = dx / d * sp; tvz = dz / d * sp; }
+      break;
+    }
+    case 'release':
+      if (st > 0.3) fingers.forEach(f => f.target = OPEN);
+      if (st > 0.5 && held) releaseHeld(false);
+      if (st > 1.6) { fingers.forEach(f => f.target = REST); setState('reset'); }
+      break;
+    case 'reset':
+      if (st > 0.7 && msgTimer <= 0) { setState('idle'); nextTurn(); updateHUD(); }
+      break;
+  }
+  // hard mode: like a real arcade claw, the grip weakens at the top -> it only keeps a letter that is still physically held
+  if (held && state === 'ret' && D().loosen > 0) {
+    if (!loosened) { loosened = true; const l = rand(0, D().loosen); fingers.forEach(f => f.target = Math.min(OPEN, f.angle + l)); }
+    else if (st > 0.35 && !gripType(held).type) { releaseHeld(true); showMsg('앗! 집게 힘이 풀렸다...', 1.6); sfx.fail(); }
+  }
+  carriage.pvx = carriage.vx; carriage.pvz = carriage.vz;
+  const k = Math.min(1, (state === 'ret' ? 5 : 7) * dt);
+  carriage.vx += (tvx - carriage.vx) * k; carriage.vz += (tvz - carriage.vz) * k;
+  carriage.x += carriage.vx * dt; carriage.z += carriage.vz * dt;
+  if (carriage.x < -CB || carriage.x > CB) { carriage.x = clamp(carriage.x, -CB, CB); carriage.vx = 0; }
+  if (carriage.z < -CB || carriage.z > CB) { carriage.z = clamp(carriage.z, -CB, CB); carriage.vz = 0; }
+
+  updateRig(dt);
+  if (state === 'descend' && st > 0.05 && (descendHit() || cableLen >= MAX_CABLE)) { setState('settle'); showMsg('꽉 잡는 중...'); }
+  updateClawVel(dt);
+  if (held) {
+    head.getWorldQuaternion(headQ);
+    if (wrapping && (state === 'grab' || state === 'ascend')) {
+      const k = 1 - Math.exp(-dt * 7);
+      held.offset.x += (0 - held.offset.x) * k; held.offset.z += (0 - held.offset.z) * k;
+      // never let it slide into the hub: drop it just below if needed
+      for (let g = 0; g < 40; g++) {
+        head.localToWorld(tmpV.copy(held.offset)); held.pos.copy(tmpV);
+        if (!clawSamples.slice(0, 2).some(s => letterDist(held, s.pos) - s.r < 0.002)) break;
+        held.offset.y -= 0.01;
+      }
+    } else wrapping = false;
+    tmpV.copy(held.offset); head.localToWorld(tmpV);
+    held.vel.subVectors(tmpV, held.pos).divideScalar(Math.max(dt, 1e-3));
+    held.pos.copy(tmpV); held.mesh.quaternion.copy(headQ).multiply(held.localQ);
+    if (wrapping) wrapFingers(held);
+  }
+  rotatePrizes(dt);
+  const n = Math.ceil(dt / (1 / 120)), h = dt / n;
+  for (let i = 0; i < n; i++) stepPhysics(h);
+  for (let k = 0; k < 2; k++) for (const p of prizes) if (!p.held) collideClawLetter(p); // extra passes: claw always stays clear
+  if (state === 'close' || state === 'grab') settleFingers();
+  // hard guarantee: if the claw is still inside a letter (it landed on it), lift the claw out
+  if (state === 'descend' || state === 'settle' || state === 'close' || state === 'grab') {
+    let lifted = false;
+    // claw resting ON a letter -> lift the claw; letters touching the claw from the side -> push the letters away
+    for (let g = 0; g < 8; g++) {
+      const pen = maxClawPen(true); if (pen <= 0.0015) break;
+      cableLen = Math.max(CABLE_REST, cableLen - pen - 0.001); updateRig(1e-3, true); lifted = true;
+    }
+    for (const p of prizes) updateBalls(p);
+    for (let k = 0; k < 3; k++) for (const p of prizes) if (!p.held) collideClawLetter(p);
+    blocked = lifted && state === 'descend' ? blocked + 1 : 0;
+    if (blocked > 6) { blocked = 0; setState('settle'); showMsg('꽉 잡는 중...'); }
+  }
+  syncPrizes();
+
+  if (actx && humGain) {
+    const motion = Math.hypot(carriage.vx, carriage.vz) / SPEED + ((state === 'descend' || state === 'ascend') ? 0.8 : 0);
+    humGain.gain.setTargetAtTime(muted ? 0 : Math.min(1, motion) * 0.05, actx.currentTime, 0.05);
+  }
+  stickPivot.rotation.x += ((state === 'move' ? mv.z : 0) * 0.4 - stickPivot.rotation.x) * Math.min(1, dt * 12);
+  stickPivot.rotation.z += ((state === 'move' ? -mv.x : 0) * 0.4 - stickPivot.rotation.z) * Math.min(1, dt * 12);
+  btnPressT -= dt; btnCap.position.y = btnPressT > 0 ? 0.158 : 0.172;
+  M.red.emissiveIntensity = state === 'move' ? 1.4 + Math.sin(performance.now() / 160) * 0.9 : 0.6;
+  const t = performance.now() / 1000;
+  flashT -= dt;
+  const chase = Math.floor(t * (flashT > 0 ? 16 : 5));
+  bulbs.forEach((b, i) => { b.material.emissiveIntensity = ((Math.floor(i / 2) + chase) % 3 === 0) ? 4 : 0.5; });
+  beaconMat.emissiveIntensity = flashT > 0 ? 2 + Math.sin(t * 25) * 2 : 1 + Math.sin(t * 2) * 0.4;
+  binLight.intensity = Math.max(0, binLight.intensity - dt * 0.15);
+  if (binPrize) binPrize.mesh.rotation.y += dt * 0.8;
+  updateConfetti(dt);
+  const showLaser = aimOn && state === 'move';
+  laser.visible = laserDot.visible = showLaser;
+  if (showLaser) { head.getWorldPosition(hp); const top = hp.y - 0.2; laser.position.set(hp.x, top / 2, hp.z); laser.scale.y = top; laserDot.position.set(hp.x, 0.012, hp.z); }
+  popupTimer -= dt; if (popupTimer <= 0) $('#popup').classList.remove('show');
+  msgTimer -= dt;
+  if (state === 'move') $('#vTime').textContent = Math.ceil(timeLeft);
+  const left = String(prizes.length); if ($('#vLeft').textContent !== left) $('#vLeft').textContent = left;
+}
+
+/* ================= Loop ================= */
+function onResize() {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); bloom.setSize(innerWidth, innerHeight);
+  if (introPhase === 'card') { const v = orbitPose(1); camera.position.copy(v.p); }
+  else if (introPhase === 'done' && viewMode !== 0 && !tween) { const v = orbitPose(viewMode); camera.position.copy(v.p); controls.target.copy(v.t); }
+}
+addEventListener('resize', onResize);
+
+$('#introTitle .jamo').innerHTML = [...JAMO].map((j, i) => `<span style="animation-delay:${i * 0.12}s">${j}</span>`).join('');
+buildPlayerPicker();
+renderPlayers();
+// 42 letters = every consonant 3 times, dropped in 3 layers so they settle into a deep pile
+updateRig(1 / 60); updateClawVel(1 / 60);
+for (let layer = 0; layer < 3; layer++) {
+  spawn(14, 0.4 + layer * 0.45, 0.09);
+  for (let i = 0; i < 260; i++) stepPhysics(1 / 120);
+}
+for (const p of prizes) { p.vel.set(0, 0, 0); p.ang.set(0, 0, 0); }
+syncPrizes(0);
+initializing = false;
+updateHUD();
+
+const perf = { u: 0, r: 0 }; window.__perf = perf;
+const dbg = {}; window.__dbg = dbg;
+const clock = new THREE.Clock();
+function loop() {
+  requestAnimationFrame(loop);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const a0 = performance.now();
+  if (dt > 1e-4) { for (let s = 0; s < TIME_SCALE; s++) update(dt); updateCamera(dt); }
+  const a1 = performance.now();
+  composer.render();
+  perf.u = perf.u * 0.9 + (a1 - a0) * 0.1; perf.r = perf.r * 0.9 + (performance.now() - a1) * 0.1;
+}
+$('#loading').style.display = 'none';
+loop();
+window.__claw = {
+  aimAt(i) { const p = prizes[i]; if (state === 'idle') startGame(); carriage.x = clamp(p.pos.x, -CB, CB); carriage.z = clamp(p.pos.z, -CB, CB); carriage.vx = carriage.vz = 0; },
+  drop() { pressDrop(); }, setDiff(k) { diffKey = k; }, get lastChance() { return lastChance; },
+  get state() { return state; }, get intro() { return introPhase; }, prizes, carriage, fingers, get wins() { return wins; },
+  maxPen() { return maxClawPen(); },
+  gripDbg() { head.getWorldPosition(hp); return prizes.map(p => ({ c: p.c, dh: Math.hypot(p.pos.x - hp.x, p.pos.z - hp.z), dy: p.pos.y - hp.y, C: fingerContacts(p, D().tol).map(c => [+c.gap.toFixed(3), +c.n.x.toFixed(2), +c.n.y.toFixed(2), +c.n.z.toFixed(2)]), g: gripType(p).type }))
+    .filter(o => o.dh < 0.7 && o.dy < 0).sort((a, b) => a.dh - b.dh).slice(0, 4).map(o => ({ ...o, dh: +o.dh.toFixed(2), dy: +o.dy.toFixed(2) })); },
+  heldContacts() { if (!held) return null; head.getWorldPosition(hp); return { c: held.c, dh: +Math.hypot(held.pos.x - hp.x, held.pos.z - hp.z).toFixed(2), gaps: fingers.map(f => +Math.min(...f.samples.map(s => letterDist(held, s.pos) - s.r)).toFixed(3)), angles: fingers.map(f => +f.angle.toFixed(2)) }; },
+  fingerState() { return fingers.map(f => ({ a: +f.angle.toFixed(2), c: f.contact ? f.contact.c : null, stopped: f.stopped })); }, players: () => players, get cur() { return cur; },
+  step(n, watch) { let m = 0; for (let i = 0; i < n; i++) { update(1 / 60); updateCamera(1 / 60); if (watch) m = Math.max(m, maxClawPen()); } composer.render(); return m; },
+};
+</script>
+</body>
+</html>
