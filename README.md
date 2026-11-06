@@ -10,11 +10,12 @@
 - 실제 집게처럼 손가락이 글자를 감싸 쥐어야 잡힘 (확률 뽑기 없음)
 - 1~6인 차례 플레이, 플레이어별로 모은 자음 표시와 결과 보기
 - 내부캠(드래그 회전) · 정면 · 측면 시점, 난이도(쉬움/보통/어려움), 글자 섞기
+- 화면 캡처: 플레이어별로 모은 자음을 함께 담아 클립보드 복사 · PNG 저장 · 공유
 
 ## 조작
 - 이동: 조이스틱 드래그 / 방향키 · WASD
 - 잡기: 빨간 버튼 / Space
-- 시점 전환: V, 글자 섞기: R
+- 시점 전환: V, 글자 섞기: R, 화면 캡처: P
 
 ## 사용 글꼴
 - [Hahmlet](https://fonts.google.com/specimen/Hahmlet), [Black Han Sans](https://fonts.google.com/specimen/Black+Han+Sans) (SIL Open Font License)
